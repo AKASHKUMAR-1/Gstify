@@ -1900,7 +1900,7 @@ export default function App() {
                     </div>
                     <div>
                       <h3 className="font-semibold text-lg mb-1">Email Us</h3>
-                      <p className="text-slate-500 dark:text-slate-400">support@gstify.com<br/>sales@gstify.com</p>
+                      <p className="text-slate-500 dark:text-slate-400">akash906kr@gmail.com<br/>sales@gstify.com</p>
                     </div>
                   </div>
                 </div>
