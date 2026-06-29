@@ -1501,7 +1501,7 @@ export default function App() {
             <div className="max-w-7xl mx-auto flex flex-col lg:flex-row items-center gap-16">
               <div className="flex-1 z-10">
                 <div className="inline-flex items-center px-4 py-2 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 font-semibold text-sm mb-6 animate-pulse">
-                  \u1F680 Launching Limited-Time Free Tier for Solo Creators
+                  🚀 Launching Limited-Time Free Tier for Solo Creators
                 </div>
                 
                 <h1 className="text-[clamp(2.5rem,5vw,3.5rem)] font-[Playfair_Display] font-bold leading-tight mb-6">
