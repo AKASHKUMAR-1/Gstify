@@ -1,7 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { FileText, Download, Eye, Edit2, Moon, Sun, Share2, Printer, MessageCircle, Mail, History, Trash2, Copy, Send, Users, Terminal, X } from 'lucide-react';
-import html2canvas from 'html2canvas';
-import { jsPDF } from 'jspdf';
 import { ClientRecord, InvoiceData, InvoiceRecord, ProductRecord, RecurringInvoiceTemplate, InvoiceStatus } from './types';
 import type { SubscriptionPlan, PaymentTransaction, UserSubscription, PlanType, SubscriptionStatus } from './types';
 import { InvoiceEditor } from './components/InvoiceEditor';
@@ -20,6 +18,14 @@ import ApiManagement from './components/ApiManagement';
 import AccountManager from './components/AccountManager';
 import { AuthModal } from './components/AuthModal';
 import { useLocalStorage, useLocalStorageString } from './lib/storage';
+import { getSuggestedInvoiceNumber, reserveNextInvoiceNumber } from './features/invoices/invoiceNumber';
+import { validateInvoice as runInvoiceValidation } from './features/invoices/validation';
+import { generatePdfBlob } from './features/invoices/pdf';
+import {
+  STORAGE_KEY, HISTORY_KEY, CLIENTS_KEY, PRODUCTS_KEY, PLAN_KEY, USAGE_KEY,
+  RECURRING_KEY, STATUSES_KEY, THEME_KEY, FREE_LIMITS, createInitialInvoice,
+} from './config/constants';
+import type { PlanTier } from './config/constants';
 import {
   PaymentService,
   SUBSCRIPTION_PLANS,
@@ -31,60 +37,8 @@ import {
   activateEarlyBirdTrial,
 } from './utils/paymentGateway';
 
-const STORAGE_KEY = 'gst_invoice_seller_details';
-const HISTORY_KEY = 'gst_invoice_history';
-const CLIENTS_KEY = 'gst_invoice_clients';
-const PRODUCTS_KEY = 'gst_invoice_products';
-const INVOICE_SEQUENCE_KEY = 'gst_invoice_sequence_by_fy';
-const PLAN_KEY = 'gst_invoice_plan';
-const USAGE_KEY = 'gst_invoice_usage';
-const RECURRING_KEY = 'gst_invoice_recurring';
-const STATUSES_KEY = 'gst_invoice_statuses';
-const THEME_KEY = 'theme';
-
-type PlanTier = 'free' | 'basic' | 'premium' | 'enterprise' | 'pro';
-
-const FREE_LIMITS = {
-  monthlyDownloads: 25,
-  maxClients: 25,
-  maxProducts: 100,
-  maxHistory: 20,
-};
-
-const initialData: InvoiceData = {
-  seller: {
-    name: '',
-    address: '',
-    email: '',
-    phone: '',
-    gstin: '',
-  },
-  buyer: {
-    name: '',
-    address: '',
-    state: '',
-    gstin: '',
-  },
-  meta: {
-    invoiceNumber: '',
-    invoiceDate: new Date().toISOString().split('T')[0],
-    dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-  },
-  items: [
-    {
-      id: crypto.randomUUID(),
-      description: 'Web Development Services',
-      hsnSac: '998311',
-      quantity: 1,
-      rate: 15000,
-      gstPercentage: 18,
-    },
-  ],
-  isInterState: false,
-};
-
 export default function App() {
-  const [data, setData] = useState<InvoiceData>(initialData);
+  const [data, setData] = useState<InvoiceData>(createInitialInvoice);
   const [isPreview, setIsPreview] = useState(false);
   const [isShareMenuOpen, setIsShareMenuOpen] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
@@ -193,68 +147,11 @@ export default function App() {
     alert(`🎉 Welcome ${name}!\n\nYour 30-Day Free Trial for the ${targetTier.toUpperCase()} Plan is now active!`);
   };
 
-  const getFinancialYear = (dateString: string) => {
-    const date = new Date(dateString || Date.now());
-    const year = date.getFullYear();
-    const startYear = date.getMonth() >= 3 ? year : year - 1;
-    const endShort = String(startYear + 1).slice(-2);
-    return `${startYear}-${endShort}`;
-  };
-
-  const formatInvoiceNumber = (fy: string, seq: number) => `INV/${fy}/${String(seq).padStart(4, '0')}`;
-
-  const getSuggestedInvoiceNumber = (dateString: string) => {
-    const fy = getFinancialYear(dateString);
-    const raw = localStorage.getItem(INVOICE_SEQUENCE_KEY);
-    const parsed: Record<string, number> = raw ? JSON.parse(raw) : {};
-    const nextSeq = (parsed[fy] || 0) + 1;
-    return formatInvoiceNumber(fy, nextSeq);
-  };
-
-  const reserveNextInvoiceNumber = (dateString: string) => {
-    const fy = getFinancialYear(dateString);
-    const raw = localStorage.getItem(INVOICE_SEQUENCE_KEY);
-    const parsed: Record<string, number> = raw ? JSON.parse(raw) : {};
-    const nextSeq = (parsed[fy] || 0) + 1;
-    parsed[fy] = nextSeq;
-    localStorage.setItem(INVOICE_SEQUENCE_KEY, JSON.stringify(parsed));
-    return formatInvoiceNumber(fy, nextSeq);
-  };
-
+  // Runs pure validation and syncs the resulting errors into local state.
   const validateInvoice = (invoiceData: InvoiceData) => {
-    const errors: Record<string, string> = {};
-    const gstRegex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/;
-
-    if (!invoiceData.seller.name.trim()) errors.sellerName = 'Seller business name is required';
-    if (invoiceData.seller.gstin && !gstRegex.test(invoiceData.seller.gstin.toUpperCase())) {
-      errors.sellerGstin = 'Seller GSTIN format is invalid';
-    }
-    if (!invoiceData.buyer.name.trim()) errors.buyerName = 'Buyer name is required';
-    if (invoiceData.buyer.gstin && !gstRegex.test(invoiceData.buyer.gstin.toUpperCase())) {
-      errors.buyerGstin = 'Buyer GSTIN format is invalid';
-    }
-    if (!invoiceData.meta.invoiceDate) errors.invoiceDate = 'Invoice date is required';
-    if (!invoiceData.meta.dueDate) errors.dueDate = 'Due date is required';
-    if (invoiceData.meta.invoiceDate && invoiceData.meta.dueDate && invoiceData.meta.dueDate < invoiceData.meta.invoiceDate) {
-      errors.dueDate = 'Due date cannot be before invoice date';
-    }
-    if (!invoiceData.meta.invoiceNumber.trim()) errors.invoiceNumber = 'Invoice number is required';
-
-    if (invoiceData.items.length === 0) {
-      errors.items = 'At least one line item is required';
-    } else {
-      invoiceData.items.forEach((item, index) => {
-        if (!item.description.trim()) errors[`item_${index}_description`] = `Item ${index + 1}: description is required`;
-        if (item.quantity <= 0) errors[`item_${index}_quantity`] = `Item ${index + 1}: quantity must be greater than 0`;
-        if (item.rate < 0) errors[`item_${index}_rate`] = `Item ${index + 1}: rate cannot be negative`;
-      });
-    }
-
-    setValidationErrors(errors);
-    return {
-      valid: Object.keys(errors).length === 0,
-      errors,
-    };
+    const result = runInvoiceValidation(invoiceData);
+    setValidationErrors(result.errors);
+    return result;
   };
 
   const [selectedTemplate, setSelectedTemplate] = useState('default');
@@ -1111,108 +1008,6 @@ export default function App() {
     alert(`Reminder opened in ${method}. Please send the message in the new window.`);
   };
 
-  const generatePdfBlob = async (element: HTMLElement): Promise<{ blob: Blob, fileName: string }> => {
-    try {
-      // Create a clone to avoid modifying original
-      const clonedElement = element.cloneNode(true) as HTMLElement;
-      
-      // Add temporary styles to handle color parsing issues
-      const styleSheet = document.createElement('style');
-      styleSheet.textContent = `
-        * {
-          color-space: srgb !important;
-          -webkit-print-color-adjust: exact !important;
-          print-color-adjust: exact !important;
-        }
-        html, body {
-          background: white !important;
-          color: #000 !important;
-        }
-        img {
-          max-width: 100% !important;
-          height: auto !important;
-          display: block !important;
-        }
-      `;
-      clonedElement.appendChild(styleSheet);
-      
-      // Recursively fix computed styles to avoid oklch which html2canvas doesn't support well
-      const fixStyles = (el: Element) => {
-        const style = window.getComputedStyle(el);
-        const element = el as HTMLElement;
-        
-        const propertiesToFix: Array<{ css: string, inline: keyof CSSStyleDeclaration }> = [
-          { css: 'color', inline: 'color' },
-          { css: 'background-color', inline: 'backgroundColor' },
-          { css: 'border-color', inline: 'borderColor' },
-          { css: 'fill', inline: 'fill' },
-          { css: 'stroke', inline: 'stroke' },
-        ];
-
-        propertiesToFix.forEach(({ css, inline }) => {
-          const value = style.getPropertyValue(css);
-          if (value && (value.includes('oklch') || value.includes('var('))) {
-            // Replace with computed hex/rgb if possible, or fallback
-            // html2canvas works better with explicit colors
-            if (inline === 'color') element.style.color = value.includes('oklch') ? '#000000' : value;
-            else if (inline === 'backgroundColor') element.style.backgroundColor = value.includes('oklch') ? '#ffffff' : value;
-            else if (inline === 'borderColor') element.style.borderColor = value.includes('oklch') ? '#dddddd' : value;
-          }
-        });
-        
-        for (let i = 0; i < el.children.length; i++) {
-          fixStyles(el.children[i]);
-        }
-      };
-      
-      // Temporarily add to DOM for rendering (hidden but layout-able)
-      clonedElement.style.position = 'fixed';
-      clonedElement.style.left = '-9999px';
-      clonedElement.style.top = '0';
-      clonedElement.style.width = '210mm'; // Standard A4 width
-      clonedElement.style.visibility = 'visible'; // Must be visible for html2canvas
-      document.body.appendChild(clonedElement);
-      
-      // Run fixStyles after appending so getComputedStyle works correctly
-      fixStyles(clonedElement);
-      
-      try {
-        const canvas = await html2canvas(clonedElement, { 
-          scale: 2, 
-          useCORS: true,
-          logging: false,
-          allowTaint: true,
-          backgroundColor: '#ffffff',
-          width: clonedElement.offsetWidth,
-          height: clonedElement.offsetHeight,
-          windowWidth: clonedElement.offsetWidth,
-        });
-        
-        document.body.removeChild(clonedElement);
-        
-        const imgData = canvas.toDataURL('image/jpeg', 0.95);
-        const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
-        
-        const pdfWidth = pdf.internal.pageSize.getWidth();
-        const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-        
-        pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
-        const fileName = `${data.meta.invoiceNumber || 'Invoice'}.pdf`;
-        
-        return { 
-          blob: pdf.output('blob'),
-          fileName 
-        };
-      } catch (canvasError) {
-        if (clonedElement.parentNode) document.body.removeChild(clonedElement);
-        throw canvasError;
-      }
-    } catch (error) {
-      console.error('Error generating PDF:', error);
-      throw error;
-    }
-  };
-
   const handleDownload = async () => {
     try {
       if (!isPremium && usage.downloads >= FREE_LIMITS.monthlyDownloads) {
@@ -1242,7 +1037,7 @@ export default function App() {
         return;
       }
       
-      const { blob, fileName } = await generatePdfBlob(element);
+      const { blob, fileName } = await generatePdfBlob(element, data.meta.invoiceNumber);
       
       // Save file
       const url = URL.createObjectURL(blob);
@@ -1293,7 +1088,7 @@ export default function App() {
 
     try {
       if (method === 'native' && navigator.share) {
-        const { blob, fileName } = await generatePdfBlob(element);
+        const { blob, fileName } = await generatePdfBlob(element, data.meta.invoiceNumber);
         const file = new File([blob], fileName, { type: 'application/pdf' });
         
         // Use canShare if available, otherwise just try sharing
