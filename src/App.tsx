@@ -1174,15 +1174,15 @@ export default function App() {
               >
                 <svg width="30" height="30" viewBox="0 0 100 100">
                   <path d="M20,10 L60,10 L80,30 L80,80 Q80,90 70,90 L20,90 Q10,90 10,80 L10,20 Q10,10 20,10 Z" className="fill-slate-900 dark:fill-white"/>
-                  <path d="M45,40 C35,40 25,50 25,60 C25,75 45,85 45,85 C45,85 65,75 65,60 C65,50 55,40 45,40 Z" className="fill-amber-500"/>
+                  <path d="M45,40 C35,40 25,50 25,60 C25,75 45,85 45,85 C45,85 65,75 65,60 C65,50 55,40 45,40 Z" className="fill-brand-500"/>
                 </svg>
                 GSTify
               </div>
               
               {/* Desktop Menu */}
               <div className="hidden md:flex items-center gap-8 text-sm font-medium">
-                <a href="#features" className="text-slate-600 dark:text-slate-400 hover:text-amber-500 transition-colors duration-200">Features</a>
-                <a href="#pricing" className="text-slate-600 dark:text-slate-400 hover:text-amber-500 transition-colors duration-200">Pricing</a>
+                <a href="#features" className="text-slate-600 dark:text-slate-400 hover:text-brand-600 transition-colors duration-200">Features</a>
+                <a href="#pricing" className="text-slate-600 dark:text-slate-400 hover:text-brand-600 transition-colors duration-200">Pricing</a>
                 {isLoggedIn ? (
                   <button 
                     onClick={() => {
@@ -1207,7 +1207,7 @@ export default function App() {
                         alert("Please buy a plan first or use 'Get Started' for free version.");
                       }
                     }}
-                    className="text-amber-600 hover:text-amber-500 transition-colors duration-200"
+                    className="text-brand-600 hover:text-brand-700 transition-colors duration-200"
                   >
                     Login
                   </button>
@@ -1226,7 +1226,7 @@ export default function App() {
                 </button>
                 <button
                   onClick={handleGetStarted}
-                  className="hidden sm:block px-5 py-2.5 rounded-full font-semibold bg-slate-900 dark:bg-white text-white dark:text-slate-900 hover:-translate-y-0.5 transition-all duration-200 shadow-md hover:shadow-lg"
+                  className="hidden sm:block px-5 py-2.5 rounded-full font-semibold bg-brand-600 hover:bg-brand-700 text-on-brand hover:-translate-y-0.5 transition-all duration-200 shadow-md hover:shadow-lg"
                 >
                   Get Started
                 </button>
@@ -1234,7 +1234,7 @@ export default function App() {
                 {/* Mobile Menu Button */}
                 <button 
                   onClick={() => setShowLandingPage(false)}
-                  className="md:hidden w-9 h-9 rounded-full bg-amber-500 text-slate-900 flex items-center justify-center shadow-md"
+                  className="md:hidden w-9 h-9 rounded-full bg-brand-600 text-on-brand flex items-center justify-center shadow-md"
                 >
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M3 12h18M3 6h18M3 18h18"/>
@@ -1246,16 +1246,16 @@ export default function App() {
 
           {/* Hero Section */}
           <section className="pt-32 pb-24 px-6 bg-gradient-to-br from-sky-50 to-white dark:from-slate-950 dark:to-slate-900 relative overflow-hidden">
-            <div className="absolute -top-24 -right-24 w-[500px] h-[500px] bg-amber-500/10 rounded-full blur-3xl"></div>
+            <div className="absolute -top-24 -right-24 w-[500px] h-[500px] bg-brand-500/10 rounded-full blur-3xl"></div>
             
             <div className="max-w-7xl mx-auto flex flex-col lg:flex-row items-center gap-16">
               <div className="flex-1 z-10">
-                <div className="inline-flex items-center px-4 py-2 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 font-semibold text-sm mb-6 animate-pulse">
+                <div className="inline-flex items-center px-4 py-2 rounded-full bg-brand-50 border border-brand-100 text-brand-700 font-semibold text-sm mb-6 animate-pulse">
                   \u1F680 Launching Limited-Time Free Tier for Solo Creators
                 </div>
                 
                 <h1 className="text-[clamp(2.5rem,5vw,3.5rem)] font-[Playfair_Display] font-bold leading-tight mb-6">
-                  Effortless Invoicing for <span className="text-amber-500 italic">Modern India</span>
+                  Effortless Invoicing for <span className="text-brand-600 italic">Modern India</span>
                 </h1>
                 
                 <p className="text-lg text-slate-600 dark:text-slate-400 leading-relaxed mb-8 max-w-xl">
@@ -1265,7 +1265,7 @@ export default function App() {
                 <div className="flex flex-wrap gap-4">
                   <button
                     onClick={handleGetStarted}
-                    className="px-7 py-3.5 rounded-full font-semibold bg-slate-900 dark:bg-white text-white dark:text-slate-900 hover:-translate-y-1 transition-all shadow-xl hover:shadow-2xl"
+                    className="px-7 py-3.5 rounded-full font-semibold bg-brand-600 hover:bg-brand-700 text-on-brand hover:-translate-y-1 transition-all shadow-xl hover:shadow-2xl"
                   >
                     Create Invoice Free
                   </button>
@@ -1328,9 +1328,9 @@ export default function App() {
             
             <div className="max-w-6xl mx-auto grid md:grid-cols-2 lg:grid-cols-4 gap-6">
               {/* Feature 1 */}
-              <div className="group bg-slate-50 dark:bg-slate-900 rounded-2xl p-6 border border-slate-200 dark:border-slate-800 hover:border-amber-500/50 transition-all duration-300 hover:-translate-y-2 hover:shadow-xl cursor-pointer">
-                <div className="w-14 h-14 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center mb-5 group-hover:bg-amber-500/10 transition-colors">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="group-hover:text-amber-500 transition-colors">
+              <div className="group bg-slate-50 dark:bg-slate-900 rounded-2xl p-6 border border-slate-200 dark:border-slate-800 hover:border-brand-500/50 transition-all duration-300 hover:-translate-y-2 hover:shadow-xl cursor-pointer">
+                <div className="w-14 h-14 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center mb-5 group-hover:bg-brand-50 transition-colors">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="group-hover:text-brand-600 transition-colors">
                     <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
                     <polyline points="14 2 14 8 20 8"></polyline>
                     <line x1="16" y1="13" x2="8" y2="13"></line>
@@ -1343,9 +1343,9 @@ export default function App() {
               </div>
 
               {/* Feature 2 */}
-              <div className="group bg-slate-50 dark:bg-slate-900 rounded-2xl p-6 border border-slate-200 dark:border-slate-800 hover:border-amber-500/50 transition-all duration-300 hover:-translate-y-2 hover:shadow-xl cursor-pointer">
-                <div className="w-14 h-14 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center mb-5 group-hover:bg-amber-500/10 transition-colors">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="group-hover:text-amber-500 transition-colors">
+              <div className="group bg-slate-50 dark:bg-slate-900 rounded-2xl p-6 border border-slate-200 dark:border-slate-800 hover:border-brand-500/50 transition-all duration-300 hover:-translate-y-2 hover:shadow-xl cursor-pointer">
+                <div className="w-14 h-14 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center mb-5 group-hover:bg-brand-50 transition-colors">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="group-hover:text-brand-600 transition-colors">
                     <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
                     <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
                   </svg>
@@ -1355,9 +1355,9 @@ export default function App() {
               </div>
 
               {/* Feature 3 */}
-              <div className="group bg-slate-50 dark:bg-slate-900 rounded-2xl p-6 border border-slate-200 dark:border-slate-800 hover:border-amber-500/50 transition-all duration-300 hover:-translate-y-2 hover:shadow-xl cursor-pointer">
-                <div className="w-14 h-14 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center mb-5 group-hover:bg-amber-500/10 transition-colors">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="group-hover:text-amber-500 transition-colors">
+              <div className="group bg-slate-50 dark:bg-slate-900 rounded-2xl p-6 border border-slate-200 dark:border-slate-800 hover:border-brand-500/50 transition-all duration-300 hover:-translate-y-2 hover:shadow-xl cursor-pointer">
+                <div className="w-14 h-14 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center mb-5 group-hover:bg-brand-50 transition-colors">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="group-hover:text-brand-600 transition-colors">
                     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                     <polyline points="7 10 12 15 17 10"></polyline>
                     <line x1="12" y1="15" x2="12" y2="3"></line>
@@ -1368,9 +1368,9 @@ export default function App() {
               </div>
 
               {/* Feature 4 */}
-              <div className="group bg-slate-50 dark:bg-slate-900 rounded-2xl p-6 border border-slate-200 dark:border-slate-800 hover:border-amber-500/50 transition-all duration-300 hover:-translate-y-2 hover:shadow-xl cursor-pointer">
-                <div className="w-14 h-14 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center mb-5 group-hover:bg-amber-500/10 transition-colors">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="group-hover:text-amber-500 transition-colors">
+              <div className="group bg-slate-50 dark:bg-slate-900 rounded-2xl p-6 border border-slate-200 dark:border-slate-800 hover:border-brand-500/50 transition-all duration-300 hover:-translate-y-2 hover:shadow-xl cursor-pointer">
+                <div className="w-14 h-14 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center mb-5 group-hover:bg-brand-50 transition-colors">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="group-hover:text-brand-600 transition-colors">
                     <rect width="7" height="7" x="3" y="3" rx="1"/>
                     <rect width="7" height="7" x="14" y="3" rx="1"/>
                     <rect width="7" height="7" x="14" y="14" rx="1"/>
@@ -1385,21 +1385,21 @@ export default function App() {
 
           {/* Testimonials Section */}
           <section id="testimonials" className="py-24 px-6 bg-slate-50 dark:bg-slate-900 relative overflow-hidden">
-            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-amber-500/5 rounded-full blur-3xl"></div>
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-brand-500/5 rounded-full blur-3xl"></div>
             
             <div className="max-w-3xl mx-auto text-center mb-16 relative z-10">
-              <h2 className="text-3xl font-bold mb-4 font-[Playfair_Display]">Loved by <span className="text-amber-500">10,000+</span> Businesses</h2>
+              <h2 className="text-3xl font-bold mb-4 font-[Playfair_Display]">Loved by <span className="text-brand-600">10,000+</span> Businesses</h2>
               <p className="text-slate-500 dark:text-slate-400">Dekhiye Indian business owners kya kehte hain GSTify ke baare mein. Humare customers ki satisfaction hi hamari pehchan hai.</p>
             </div>
             
             <div className="max-w-6xl mx-auto grid md:grid-cols-2 lg:grid-cols-3 gap-6 relative z-10">
               {/* Testimonial 1 */}
-              <div className="group bg-white dark:bg-slate-800 rounded-2xl p-8 border border-slate-200 dark:border-slate-700 hover:border-amber-500/50 transition-all duration-300 hover:-translate-y-2 hover:shadow-xl relative">
-                <div className="absolute top-5 right-6 text-6xl font-serif text-amber-500/10">â€</div>
+              <div className="group bg-white dark:bg-slate-800 rounded-2xl p-8 border border-slate-200 dark:border-slate-700 hover:border-brand-500/50 transition-all duration-300 hover:-translate-y-2 hover:shadow-xl relative">
+                <div className="absolute top-5 right-6 text-6xl font-serif text-brand-500/10">â€</div>
                 <div className="text-amber-500 mb-5 text-lg">â˜…â˜…â˜…â˜…â˜…</div>
                 <p className="text-slate-700 dark:text-slate-300 leading-relaxed mb-8 italic">"Pehle GST invoice banana ek bada headache tha. GSTify ke aane ke baad meri accounting mein 70% waqt bach gaya hai. Interface bahut smooth hai."</p>
                 <div className="flex items-center gap-4">
-                  <img src="https://ui-avatars.com/api/?name=Rajesh+Kumar&background=0f172a&color=d4af37" alt="Rajesh Kumar" className="w-12 h-12 rounded-full border-2 border-amber-500" />
+                  <img src="https://ui-avatars.com/api/?name=Rajesh+Kumar&background=2e1065&color=c4b5fd" alt="Rajesh Kumar" className="w-12 h-12 rounded-full border-2 border-brand-500" />
                   <div>
                     <div className="font-semibold">Rajesh Kumar</div>
                     <div className="text-sm text-slate-500 dark:text-slate-400">Owner, Kumar Electronics</div>
@@ -1408,12 +1408,12 @@ export default function App() {
               </div>
 
               {/* Testimonial 2 */}
-              <div className="group bg-white dark:bg-slate-800 rounded-2xl p-8 border border-slate-200 dark:border-slate-700 hover:border-amber-500/50 transition-all duration-300 hover:-translate-y-2 hover:shadow-xl relative">
-                <div className="absolute top-5 right-6 text-6xl font-serif text-amber-500/10">â€</div>
+              <div className="group bg-white dark:bg-slate-800 rounded-2xl p-8 border border-slate-200 dark:border-slate-700 hover:border-brand-500/50 transition-all duration-300 hover:-translate-y-2 hover:shadow-xl relative">
+                <div className="absolute top-5 right-6 text-6xl font-serif text-brand-500/10">â€</div>
                 <div className="text-amber-500 mb-5 text-lg">â˜…â˜…â˜…â˜…â˜…</div>
                 <p className="text-slate-700 dark:text-slate-300 leading-relaxed mb-8 italic">"Main ek freelance graphic designer hoon. Mujhe professional invoices chahiye hote the client ke liye. GSTify ne meri image bahut improve ki hai."</p>
                 <div className="flex items-center gap-4">
-                  <img src="https://ui-avatars.com/api/?name=Priya+Sharma&background=0f172a&color=d4af37" alt="Priya Sharma" className="w-12 h-12 rounded-full border-2 border-amber-500" />
+                  <img src="https://ui-avatars.com/api/?name=Priya+Sharma&background=2e1065&color=c4b5fd" alt="Priya Sharma" className="w-12 h-12 rounded-full border-2 border-brand-500" />
                   <div>
                     <div className="font-semibold">Priya Sharma</div>
                     <div className="text-sm text-slate-500 dark:text-slate-400">Freelance Designer</div>
@@ -1422,12 +1422,12 @@ export default function App() {
               </div>
 
               {/* Testimonial 3 */}
-              <div className="group bg-white dark:bg-slate-800 rounded-2xl p-8 border border-slate-200 dark:border-slate-700 hover:border-amber-500/50 transition-all duration-300 hover:-translate-y-2 hover:shadow-xl relative">
-                <div className="absolute top-5 right-6 text-6xl font-serif text-amber-500/10">â€</div>
+              <div className="group bg-white dark:bg-slate-800 rounded-2xl p-8 border border-slate-200 dark:border-slate-700 hover:border-brand-500/50 transition-all duration-300 hover:-translate-y-2 hover:shadow-xl relative">
+                <div className="absolute top-5 right-6 text-6xl font-serif text-brand-500/10">â€</div>
                 <div className="text-amber-500 mb-5 text-lg">â˜…â˜…â˜…â˜…â˜…</div>
                 <p className="text-slate-700 dark:text-slate-300 leading-relaxed mb-8 italic">"Auto GST calculation feature mere liye best hai. Maine kai tools try kiye par GSTify ka simplicity aur accuracy unmatched hai. Highly recommended!"</p>
                 <div className="flex items-center gap-4">
-                  <img src="https://ui-avatars.com/api/?name=Amit+Verma&background=0f172a&color=d4af37" alt="Amit Verma" className="w-12 h-12 rounded-full border-2 border-amber-500" />
+                  <img src="https://ui-avatars.com/api/?name=Amit+Verma&background=2e1065&color=c4b5fd" alt="Amit Verma" className="w-12 h-12 rounded-full border-2 border-brand-500" />
                   <div>
                     <div className="font-semibold">Amit Verma</div>
                     <div className="text-sm text-slate-500 dark:text-slate-400">CA & Tax Consultant</div>
@@ -1436,12 +1436,12 @@ export default function App() {
               </div>
 
               {/* Testimonial 4 */}
-              <div className="group bg-white dark:bg-slate-800 rounded-2xl p-8 border border-slate-200 dark:border-slate-700 hover:border-amber-500/50 transition-all duration-300 hover:-translate-y-2 hover:shadow-xl relative">
-                <div className="absolute top-5 right-6 text-6xl font-serif text-amber-500/10">â€</div>
+              <div className="group bg-white dark:bg-slate-800 rounded-2xl p-8 border border-slate-200 dark:border-slate-700 hover:border-brand-500/50 transition-all duration-300 hover:-translate-y-2 hover:shadow-xl relative">
+                <div className="absolute top-5 right-6 text-6xl font-serif text-brand-500/10">â€</div>
                 <div className="text-amber-500 mb-5 text-lg">â˜…â˜…â˜…â˜…â˜…</div>
                 <p className="text-slate-700 dark:text-slate-300 leading-relaxed mb-8 italic">"Dark mode support ek premium touch deta hai. Raat ko bhi kaam karna aasan hai. Support team bhi bahut helpful hai."</p>
                 <div className="flex items-center gap-4">
-                  <img src="https://ui-avatars.com/api/?name=Sneha+Patel&background=0f172a&color=d4af37" alt="Sneha Patel" className="w-12 h-12 rounded-full border-2 border-amber-500" />
+                  <img src="https://ui-avatars.com/api/?name=Sneha+Patel&background=2e1065&color=c4b5fd" alt="Sneha Patel" className="w-12 h-12 rounded-full border-2 border-brand-500" />
                   <div>
                     <div className="font-semibold">Sneha Patel</div>
                     <div className="text-sm text-slate-500 dark:text-slate-400">Boutique Owner</div>
@@ -1450,12 +1450,12 @@ export default function App() {
               </div>
 
               {/* Testimonial 5 */}
-              <div className="group bg-white dark:bg-slate-800 rounded-2xl p-8 border border-slate-200 dark:border-slate-700 hover:border-amber-500/50 transition-all duration-300 hover:-translate-y-2 hover:shadow-xl relative">
-                <div className="absolute top-5 right-6 text-6xl font-serif text-amber-500/10">â€</div>
+              <div className="group bg-white dark:bg-slate-800 rounded-2xl p-8 border border-slate-200 dark:border-slate-700 hover:border-brand-500/50 transition-all duration-300 hover:-translate-y-2 hover:shadow-xl relative">
+                <div className="absolute top-5 right-6 text-6xl font-serif text-brand-500/10">â€</div>
                 <div className="text-amber-500 mb-5 text-lg">â˜…â˜…â˜…â˜…â˜†</div>
                 <p className="text-slate-700 dark:text-slate-300 leading-relaxed mb-8 italic">"Bahut acha tool hai. Sirf mobile app ka wait kar raha hoon. Web version par currently mera poora kaam chal raha hai."</p>
                 <div className="flex items-center gap-4">
-                  <img src="https://ui-avatars.com/api/?name=Vikram+Singh&background=0f172a&color=d4af37" alt="Vikram Singh" className="w-12 h-12 rounded-full border-2 border-amber-500" />
+                  <img src="https://ui-avatars.com/api/?name=Vikram+Singh&background=2e1065&color=c4b5fd" alt="Vikram Singh" className="w-12 h-12 rounded-full border-2 border-brand-500" />
                   <div>
                     <div className="font-semibold">Vikram Singh</div>
                     <div className="text-sm text-slate-500 dark:text-slate-400">Logistics Manager</div>
@@ -1464,12 +1464,12 @@ export default function App() {
               </div>
 
               {/* Testimonial 6 */}
-              <div className="group bg-white dark:bg-slate-800 rounded-2xl p-8 border border-slate-200 dark:border-slate-700 hover:border-amber-500/50 transition-all duration-300 hover:-translate-y-2 hover:shadow-xl relative">
-                <div className="absolute top-5 right-6 text-6xl font-serif text-amber-500/10">â€</div>
+              <div className="group bg-white dark:bg-slate-800 rounded-2xl p-8 border border-slate-200 dark:border-slate-700 hover:border-brand-500/50 transition-all duration-300 hover:-translate-y-2 hover:shadow-xl relative">
+                <div className="absolute top-5 right-6 text-6xl font-serif text-brand-500/10">â€</div>
                 <div className="text-amber-500 mb-5 text-lg">â˜…â˜…â˜…â˜…â˜…</div>
                 <p className="text-slate-700 dark:text-slate-300 leading-relaxed mb-8 italic">"Export to PDF feature crystal clear quality deta hai. Mere clients hamesha mujhe compliment karte hain professional invoice ke liye."</p>
                 <div className="flex items-center gap-4">
-                  <img src="https://ui-avatars.com/api/?name=Anjali+Rao&background=0f172a&color=d4af37" alt="Anjali Rao" className="w-12 h-12 rounded-full border-2 border-amber-500" />
+                  <img src="https://ui-avatars.com/api/?name=Anjali+Rao&background=2e1065&color=c4b5fd" alt="Anjali Rao" className="w-12 h-12 rounded-full border-2 border-brand-500" />
                   <div>
                     <div className="font-semibold">Anjali Rao</div>
                     <div className="text-sm text-slate-500 dark:text-slate-400">Interior Designer</div>
@@ -1489,12 +1489,12 @@ export default function App() {
                 <span className={`transition-colors ${!isYearlyPricing ? 'text-slate-900 dark:text-white font-semibold' : 'text-slate-600 dark:text-slate-400'}`}>Monthly</span>
                 <button 
                   onClick={() => setIsYearlyPricing(!isYearlyPricing)}
-                  className={`relative w-14 h-8 rounded-full transition-colors ${isYearlyPricing ? 'bg-amber-500' : 'bg-slate-200 dark:bg-slate-700'}`}
+                  className={`relative w-14 h-8 rounded-full transition-colors ${isYearlyPricing ? 'bg-brand-600' : 'bg-slate-200 dark:bg-slate-700'}`}
                 >
                   <div className={`absolute top-1 w-6 h-6 rounded-full bg-white shadow-md transition-transform transform ${isYearlyPricing ? 'translate-x-6 left-1' : 'left-1'}`}></div>
                 </button>
                 <span className={`transition-colors ${isYearlyPricing ? 'text-slate-900 dark:text-white font-semibold' : 'text-slate-600 dark:text-slate-400'}`}>
-                  Yearly <span className="bg-amber-500/10 text-amber-600 dark:text-amber-400 px-2 py-0.5 rounded-full text-xs font-bold ml-1">Save 20%</span>
+                  Yearly <span className="bg-brand-50 text-brand-700 px-2 py-0.5 rounded-full text-xs font-bold ml-1">Save 20%</span>
                 </span>
               </div>
             </div>
@@ -1508,15 +1508,15 @@ export default function App() {
                 
                 <ul className="space-y-4 mb-8 text-left">
                   <li className="flex items-center gap-3">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="text-amber-500 flex-shrink-0"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="text-brand-600 flex-shrink-0"><polyline points="20 6 9 17 4 12"></polyline></svg>
                     <span>Up to 25 Invoices/month</span>
                   </li>
                   <li className="flex items-center gap-3">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="text-amber-500 flex-shrink-0"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="text-brand-600 flex-shrink-0"><polyline points="20 6 9 17 4 12"></polyline></svg>
                     <span>Basic GST Calculation</span>
                   </li>
                   <li className="flex items-center gap-3">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="text-amber-500 flex-shrink-0"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="text-brand-600 flex-shrink-0"><polyline points="20 6 9 17 4 12"></polyline></svg>
                     <span>Standard PDF Export</span>
                   </li>
                   <li className="flex items-center gap-3 text-slate-400 opacity-50">
@@ -1538,9 +1538,9 @@ export default function App() {
               
               {/* Professional Plan - Free Trial */}
               <div className="relative rounded-2xl overflow-hidden">
-                <div className="bg-gradient-to-b from-amber-50 to-white dark:from-slate-800 dark:to-slate-900 rounded-2xl p-8 border-2 border-amber-500 shadow-2xl ring-2 ring-amber-400 ring-offset-2 dark:ring-offset-slate-950 relative flex flex-col h-full justify-between">
+                <div className="bg-gradient-to-b from-brand-50 to-white dark:from-slate-800 dark:to-slate-900 rounded-2xl p-8 border-2 border-brand-500 shadow-2xl ring-2 ring-brand-500 ring-offset-2 dark:ring-offset-slate-950 relative flex flex-col h-full justify-between">
                   <div>
-                    <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-amber-500 text-slate-900 px-4 py-1 rounded-full text-xs font-bold uppercase tracking-wider">
+                    <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-brand-600 text-on-brand px-4 py-1 rounded-full text-xs font-bold uppercase tracking-wider">
                       Most Popular
                     </div>
                     <h3 className="text-xl font-semibold mb-3">Professional</h3>
@@ -1549,19 +1549,19 @@ export default function App() {
                     
                     <ul className="space-y-4 mb-8 text-left">
                       <li className="flex items-center gap-3">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="text-amber-500 flex-shrink-0"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="text-brand-600 flex-shrink-0"><polyline points="20 6 9 17 4 12"></polyline></svg>
                         <span>Unlimited Invoices</span>
                       </li>
                       <li className="flex items-center gap-3">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="text-amber-500 flex-shrink-0"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="text-brand-600 flex-shrink-0"><polyline points="20 6 9 17 4 12"></polyline></svg>
                         <span>Advanced GST Reports (GSTR-1)</span>
                       </li>
                       <li className="flex items-center gap-3">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="text-amber-500 flex-shrink-0"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="text-brand-600 flex-shrink-0"><polyline points="20 6 9 17 4 12"></polyline></svg>
                         <span>Remove GSTify Branding</span>
                       </li>
                       <li className="flex items-center gap-3">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="text-amber-500 flex-shrink-0"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="text-brand-600 flex-shrink-0"><polyline points="20 6 9 17 4 12"></polyline></svg>
                         <span>Priority Email Support</span>
                       </li>
                     </ul>
@@ -1569,7 +1569,7 @@ export default function App() {
                   
                   <button 
                     onClick={() => handleSelectPlanLanding('pro')}
-                    className="w-full py-3 rounded-full bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold transition-all shadow-lg hover:shadow-xl cursor-pointer"
+                    className="w-full py-3 rounded-full bg-brand-600 hover:bg-brand-700 text-on-brand font-bold transition-all shadow-lg hover:shadow-xl cursor-pointer"
                   >
                     Try Free for 30 Days
                   </button>
@@ -1586,19 +1586,19 @@ export default function App() {
                     
                     <ul className="space-y-4 mb-8 text-left">
                       <li className="flex items-center gap-3">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="text-amber-500 flex-shrink-0"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="text-brand-600 flex-shrink-0"><polyline points="20 6 9 17 4 12"></polyline></svg>
                         <span>Everything in Pro</span>
                       </li>
                       <li className="flex items-center gap-3">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="text-amber-500 flex-shrink-0"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="text-brand-600 flex-shrink-0"><polyline points="20 6 9 17 4 12"></polyline></svg>
                         <span>Multi-user Access (5 Users)</span>
                       </li>
                       <li className="flex items-center gap-3">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="text-amber-500 flex-shrink-0"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="text-brand-600 flex-shrink-0"><polyline points="20 6 9 17 4 12"></polyline></svg>
                         <span>API Access</span>
                       </li>
                       <li className="flex items-center gap-3">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="text-amber-500 flex-shrink-0"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="text-brand-600 flex-shrink-0"><polyline points="20 6 9 17 4 12"></polyline></svg>
                         <span>Dedicated Account Manager</span>
                       </li>
                     </ul>
@@ -1628,7 +1628,7 @@ export default function App() {
                 <div className="space-y-6">
                   {/* Address Card */}
                   <div className="bg-white dark:bg-slate-800 rounded-xl p-6 border border-slate-200 dark:border-slate-700 flex items-start gap-4">
-                    <div className="w-12 h-12 rounded-lg bg-slate-50 dark:bg-slate-900 flex items-center justify-center text-amber-500 flex-shrink-0">
+                    <div className="w-12 h-12 rounded-lg bg-slate-50 dark:bg-slate-900 flex items-center justify-center text-brand-600 flex-shrink-0">
                       <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
                         <circle cx="12" cy="10" r="3"></circle>
@@ -1642,7 +1642,7 @@ export default function App() {
 
                   {/* Email Card */}
                   <div className="bg-white dark:bg-slate-800 rounded-xl p-6 border border-slate-200 dark:border-slate-700 flex items-start gap-4">
-                    <div className="w-12 h-12 rounded-lg bg-slate-50 dark:bg-slate-900 flex items-center justify-center text-amber-500 flex-shrink-0">
+                    <div className="w-12 h-12 rounded-lg bg-slate-50 dark:bg-slate-900 flex items-center justify-center text-brand-600 flex-shrink-0">
                       <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
                         <polyline points="22,6 12,13 2,6"></polyline>
@@ -1663,7 +1663,7 @@ export default function App() {
                         <label className="block text-sm font-medium mb-2">Full Name</label>
                         <input 
                           type="text" 
-                          className="w-full px-4 py-3 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-all" 
+                          className="w-full px-4 py-3 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all" 
                           placeholder="Aapka naam" 
                           required
                         />
@@ -1673,7 +1673,7 @@ export default function App() {
                         <label className="block text-sm font-medium mb-2">Email Address</label>
                         <input 
                           type="email" 
-                          className="w-full px-4 py-3 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-all" 
+                          className="w-full px-4 py-3 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all" 
                           placeholder="name@company.com" 
                           required
                         />
@@ -1681,7 +1681,7 @@ export default function App() {
 
                       <div>
                         <label className="block text-sm font-medium mb-2">Subject</label>
-                        <select className="w-full px-4 py-3 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-all">
+                        <select className="w-full px-4 py-3 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all">
                           <option value="general">General Inquiry</option>
                           <option value="support">Technical Support</option>
                           <option value="sales">Sales Question</option>
@@ -1693,7 +1693,7 @@ export default function App() {
                         <label className="block text-sm font-medium mb-2">Message</label>
                         <textarea 
                           rows={5}
-                          className="w-full px-4 py-3 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-all resize-none" 
+                          className="w-full px-4 py-3 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all resize-none" 
                           placeholder="Apna message yahan likhein..." 
                           required
                         />
@@ -1701,7 +1701,7 @@ export default function App() {
 
                       <button 
                         type="submit" 
-                        className="w-full py-4 bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-semibold rounded-lg hover:-translate-y-0.5 transition-all shadow-lg hover:shadow-xl"
+                        className="w-full py-4 bg-brand-600 hover:bg-brand-700 text-on-brand font-semibold rounded-lg hover:-translate-y-0.5 transition-all shadow-lg hover:shadow-xl"
                       >
                         Send Message
                       </button>
@@ -1718,7 +1718,7 @@ export default function App() {
               <div className="flex items-center justify-center gap-3 font-[Playfair_Display] font-bold text-xl mb-4">
                 <svg width="30" height="30" viewBox="0 0 100 100">
                   <path d="M20,10 L60,10 L80,30 L80,80 Q80,90 70,90 L20,90 Q10,90 10,80 L10,20 Q10,10 20,10 Z" className="fill-slate-900 dark:fill-white"/>
-                  <path d="M45,40 C35,40 25,50 25,60 C25,75 45,85 45,85 C45,85 65,75 65,60 C65,50 55,40 45,40 Z" className="fill-amber-500"/>
+                  <path d="M45,40 C35,40 25,50 25,60 C25,75 45,85 45,85 C45,85 65,75 65,60 C65,50 55,40 45,40 Z" className="fill-brand-500"/>
                 </svg>
                 GSTify
               </div>
