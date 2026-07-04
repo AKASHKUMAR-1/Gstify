@@ -30,7 +30,7 @@ export const InvoiceStatusTracker: React.FC<Props> = ({
       case 'paid': return 'bg-emerald-500 text-white';
       case 'overdue': return 'bg-red-500 text-white';
       case 'viewed': return 'bg-blue-500 text-white';
-      case 'sent': return 'bg-indigo-500 text-white';
+      case 'sent': return 'bg-brand-600 text-on-brand';
       default: return 'bg-slate-500 text-white';
     }
   };
@@ -58,23 +58,23 @@ export const InvoiceStatusTracker: React.FC<Props> = ({
   })).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
   return (
-    <div className="bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-slate-200 dark:border-slate-700 p-6">
+    <div className="bg-surface-1 rounded-[12px] shadow-sm border border-line p-6">
       <div className="flex justify-between items-center mb-6">
-        <h2 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
-          <Clock size={24} className="text-indigo-600 dark:text-indigo-400" />
+        <h2 className="text-xl font-semibold text-content-primary flex items-center gap-2">
+          <Clock size={24} className="text-brand-600" />
           Invoice Status Tracker
           {!isPremium && <span className="ml-2 px-2 py-0.5 text-xs bg-amber-100 text-amber-800 rounded-full border border-amber-200">Premium Feature</span>}
         </h2>
-        <button onClick={onClose} className="text-slate-500 hover:text-slate-700 dark:hover:text-slate-300">
+        <button onClick={onClose} className="text-content-secondary hover:text-content-primary">
           Close
         </button>
       </div>
 
       {history.length === 0 ? (
-        <div className="text-center py-12 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-lg">
-          <Clock size={48} className="mx-auto text-slate-300 dark:text-slate-600 mb-4" />
-          <h3 className="text-lg font-medium text-slate-900 dark:text-white mb-1">No Invoices Yet</h3>
-          <p className="text-slate-500 dark:text-slate-400">
+        <div className="text-center py-12 border-2 border-dashed border-line rounded-[12px]">
+          <Clock size={48} className="mx-auto text-content-muted mb-4" />
+          <h3 className="text-lg font-medium text-content-primary mb-1">No Invoices Yet</h3>
+          <p className="text-content-muted">
             Download or send an invoice to track its status here.
           </p>
         </div>
@@ -87,12 +87,12 @@ export const InvoiceStatusTracker: React.FC<Props> = ({
             return (
               <div 
                 key={record.id} 
-                className={`p-4 border rounded-lg transition-colors ${status === 'overdue' ? 'border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/10' : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800'}`}
+                className={`p-4 border rounded-[12px] transition-colors ${status === 'overdue' ? 'border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/10' : 'border-line bg-surface-1'}`}
               >
                 <div className="flex justify-between items-start">
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
-                      <h3 className="font-semibold text-slate-900 dark:text-white">{record.data.meta.invoiceNumber}</h3>
+                      <h3 className="font-semibold text-content-primary">{record.data.meta.invoiceNumber}</h3>
                       <span className={`px-2 py-0.5 text-xs rounded-full flex items-center gap-1 ${getStatusColor(status)}`}>
                         {getStatusIcon(status)}
                         <span className="capitalize">{status}</span>
@@ -103,10 +103,10 @@ export const InvoiceStatusTracker: React.FC<Props> = ({
                         </span>
                       )}
                     </div>
-                    <p className="text-sm text-slate-600 dark:text-slate-400">
+                    <p className="text-sm text-content-secondary">
                       {record.data.buyer.name} • ₹{record.data.items.reduce((acc, i) => acc + (i.quantity * i.rate * (1 + i.gstPercentage/100)), 0).toFixed(2)}
                     </p>
-                    <p className="text-xs text-slate-500 dark:text-slate-500">
+                    <p className="text-xs text-content-muted">
                       Due: {record.data.meta.dueDate} • Created: {new Date(record.createdAt).toLocaleDateString()}
                     </p>
                   </div>
@@ -132,7 +132,7 @@ export const InvoiceStatusTracker: React.FC<Props> = ({
                     <select 
                       value={status} 
                       onChange={e => onUpdateStatus(record.id, e.target.value)}
-                      className="ml-2 p-1.5 border border-slate-300 dark:border-slate-600 rounded-md bg-white dark:bg-slate-900 text-slate-900 dark:text-white text-sm"
+                      className="ml-2 p-1.5 border border-line rounded-[10px] bg-surface-1 text-content-primary text-sm"
                     >
                       <option value="draft">Draft</option>
                       <option value="sent">Sent</option>

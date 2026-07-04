@@ -76,17 +76,17 @@ export const RecurringInvoices: React.FC<Props> = ({
     return date.toISOString().split('T')[0];
   };
 
-  const inputClasses = "w-full p-2 border border-slate-300 dark:border-slate-600 rounded-md focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-slate-900 text-slate-900 dark:text-white";
-  const labelClasses = "block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1";
+  const inputClasses = "w-full p-2.5 border border-line rounded-[10px] focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none bg-surface-1 text-content-primary placeholder:text-content-muted transition-colors";
+  const labelClasses = "block text-sm font-medium text-content-secondary mb-1";
 
   if (isEditing) {
     return (
-      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-slate-200 dark:border-slate-700 p-6">
+      <div className="bg-surface-1 rounded-[12px] shadow-sm border border-line p-6">
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-bold text-slate-900 dark:text-white">
+          <h2 className="text-xl font-semibold text-content-primary">
             {editingTemplate.createdAt ? 'Edit Recurring Invoice' : 'New Recurring Invoice'}
           </h2>
-          <button onClick={() => setIsEditing(false)} className="text-slate-500 hover:text-slate-700 dark:hover:text-slate-300">
+          <button onClick={() => setIsEditing(false)} className="text-content-secondary hover:text-content-primary">
             Cancel
           </button>
         </div>
@@ -164,16 +164,16 @@ export const RecurringInvoices: React.FC<Props> = ({
             </div>
           </div>
 
-          <div className="mt-6 pt-6 border-t border-slate-200 dark:border-slate-700 flex justify-end gap-3">
+          <div className="mt-6 pt-6 border-t border-line flex justify-end gap-3">
             <button 
               onClick={() => setIsEditing(false)}
-              className="px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-md text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
+              className="px-4 py-2 border border-line rounded-[10px] text-content-secondary hover:bg-surface-2 hover:text-content-primary transition-colors"
             >
               Cancel
             </button>
             <button 
               onClick={handleSave}
-              className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
+              className="px-4 py-2 bg-brand-600 text-on-brand rounded-[10px] hover:bg-brand-700 transition-colors"
             >
               Save Template
             </button>
@@ -184,28 +184,28 @@ export const RecurringInvoices: React.FC<Props> = ({
   }
 
   return (
-    <div className="bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-slate-200 dark:border-slate-700 p-6">
+    <div className="bg-surface-1 rounded-[12px] shadow-sm border border-line p-6">
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h2 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
-            <Clock size={24} className="text-indigo-600 dark:text-indigo-400" />
+          <h2 className="text-xl font-semibold text-content-primary flex items-center gap-2">
+            <Clock size={24} className="text-brand-600" />
             Recurring Invoices
             {!isPremium && <span className="ml-2 px-2 py-0.5 text-xs bg-amber-100 text-amber-800 rounded-full border border-amber-200">Premium Feature</span>}
           </h2>
-          <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">
+          <p className="text-content-muted text-sm mt-1">
             Automate your billing. Base data uses current editor contents.
           </p>
         </div>
         <div className="flex gap-2">
           <button 
             onClick={onClose}
-            className="px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-md text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
+            className="px-4 py-2 border border-line rounded-[10px] text-content-secondary hover:bg-surface-2 hover:text-content-primary transition-colors"
           >
             Close
           </button>
           <button 
             onClick={handleCreateNew}
-            className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 flex items-center gap-2"
+            className="px-4 py-2 bg-brand-600 text-on-brand rounded-[10px] hover:bg-brand-700 flex items-center gap-2 transition-colors"
           >
             <Plus size={16} /> New Recurring
           </button>
@@ -219,15 +219,15 @@ export const RecurringInvoices: React.FC<Props> = ({
       )}
 
       {templates.length === 0 ? (
-        <div className="text-center py-12 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-lg">
-          <Clock size={48} className="mx-auto text-slate-300 dark:text-slate-600 mb-4" />
-          <h3 className="text-lg font-medium text-slate-900 dark:text-white mb-1">No Recurring Invoices</h3>
-          <p className="text-slate-500 dark:text-slate-400 mb-4 max-w-md mx-auto">
+        <div className="text-center py-12 border-2 border-dashed border-line rounded-[12px]">
+          <Clock size={48} className="mx-auto text-content-muted mb-4" />
+          <h3 className="text-lg font-medium text-content-primary mb-1">No Recurring Invoices</h3>
+          <p className="text-content-muted mb-4 max-w-md mx-auto">
             Set up automatic invoice generation for your retainers, subscriptions, and regular clients.
           </p>
-          <button 
+          <button
             onClick={handleCreateNew}
-            className="px-4 py-2 bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300 rounded-md hover:bg-indigo-200 dark:hover:bg-indigo-900/60 font-medium"
+            className="px-4 py-2 bg-brand-50 text-brand-700 rounded-[10px] hover:bg-brand-100 font-medium transition-colors"
           >
             Create Your First Template
           </button>
@@ -235,42 +235,42 @@ export const RecurringInvoices: React.FC<Props> = ({
       ) : (
         <div className="space-y-4">
           {templates.map(template => (
-            <div key={template.id} className={`p-4 border rounded-lg transition-colors ${template.isActive ? 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800' : 'border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 opacity-75'}`}>
+            <div key={template.id} className={`p-4 border rounded-[12px] transition-colors ${template.isActive ? 'border-line bg-surface-1' : 'border-line bg-surface-2 opacity-75'}`}>
               <div className="flex justify-between items-start">
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-1">
-                    <h3 className="font-semibold text-slate-900 dark:text-white">{template.name}</h3>
+                    <h3 className="font-semibold text-content-primary">{template.name}</h3>
                     {template.isActive ? (
                       <span className="px-2 py-0.5 text-xs bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 rounded-full flex items-center gap-1"><CheckCircle size={12} /> Active</span>
                     ) : (
-                      <span className="px-2 py-0.5 text-xs bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-300 rounded-full">Paused</span>
+                      <span className="px-2 py-0.5 text-xs bg-surface-2 text-content-secondary rounded-full">Paused</span>
                     )}
-                    <span className="px-2 py-0.5 text-xs bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400 rounded-full capitalize">
+                    <span className="px-2 py-0.5 text-xs bg-brand-50 text-brand-700 rounded-full capitalize">
                       {template.frequency}
                     </span>
                   </div>
-                  
-                  <div className="text-sm text-slate-500 dark:text-slate-400 mb-2 flex items-center gap-4">
+
+                  <div className="text-sm text-content-muted mb-2 flex items-center gap-4">
                     <span className="flex items-center gap-1"><Calendar size={14} /> Next: {template.nextDueDate}</span>
                     {template.lastGeneratedDate && <span>Last: {template.lastGeneratedDate}</span>}
                   </div>
-                  
-                  <div className="text-sm font-medium text-slate-700 dark:text-slate-300">
+
+                  <div className="text-sm font-medium text-content-secondary">
                     Billed to: {template.invoiceData.buyer?.name || 'Unknown'} • ₹{template.invoiceData.items.reduce((acc, item) => acc + (item.quantity * item.rate * (1 + item.gstPercentage/100)), 0).toFixed(2)}
                   </div>
                 </div>
-                
+
                 <div className="flex items-center gap-2 ml-4">
-                  <button 
+                  <button
                     onClick={() => onGenerate(template)}
-                    className="p-2 text-indigo-600 hover:bg-indigo-50 dark:text-indigo-400 dark:hover:bg-indigo-900/30 rounded-md transition-colors"
+                    className="p-2 text-brand-600 hover:bg-brand-50 rounded-[10px] transition-colors"
                     title="Generate Now"
                   >
                     <Play size={18} />
                   </button>
-                  <button 
+                  <button
                     onClick={() => handleEdit(template)}
-                    className="p-2 text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-700 rounded-md transition-colors"
+                    className="p-2 text-content-secondary hover:bg-surface-2 hover:text-content-primary rounded-[10px] transition-colors"
                     title="Edit Template"
                   >
                     <Edit2 size={18} />
