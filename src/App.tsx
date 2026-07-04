@@ -22,6 +22,7 @@ import { useAuth } from './features/auth/useAuth';
 import { useClients } from './features/clients/useClients';
 import { useProducts } from './features/products/useProducts';
 import { useInvoiceHistory } from './features/invoices/useInvoiceHistory';
+import { startRazorpayCheckout } from './features/billing/razorpay';
 import { useLocalStorage, useLocalStorageString } from './lib/storage';
 import { getSuggestedInvoiceNumber, reserveNextInvoiceNumber } from './features/invoices/invoiceNumber';
 import { validateInvoice as runInvoiceValidation } from './features/invoices/validation';
@@ -737,17 +738,25 @@ export default function App() {
     setPaymentProcessing(true);
     setPaymentError(null);
 
-    // Bypass Razorpay entirely: instantly activate plan free for 30 days
-    setTimeout(() => {
-      const mockTransactionId = `PAY-FREE-${Date.now().toString(36).toUpperCase()}`;
-      handlePaymentComplete(
-        mockTransactionId,
-        `ORD-FREE-${Date.now().toString(36).toUpperCase()}`,
-        'free_trial_signature',
-        userDetails
-      );
-      setPaymentProcessing(false);
-    }, 1000);
+    // Real Razorpay flow: server creates the order, opens Checkout, and the
+    // signature is verified server-side before we treat the payment as done.
+    const amount = Math.round(selectedPaymentPlan.price * 1.18 * 100); // price + 18% GST, in paise
+    startRazorpayCheckout({
+      keyId: (import.meta as any).env?.VITE_RAZORPAY_KEY_ID || '',
+      amount,
+      currency: selectedPaymentPlan.currency,
+      planId: selectedPaymentPlan.id,
+      planName: selectedPaymentPlan.name,
+      user: userDetails,
+      onSuccess: (paymentId, orderId, signature) => {
+        setPaymentProcessing(false);
+        handlePaymentComplete(paymentId, orderId, signature, userDetails);
+      },
+      onError: (message) => {
+        setPaymentProcessing(false);
+        setPaymentError(message);
+      },
+    });
   };
 
   // Shared payment completion handler (used by both real Razorpay and demo checkout)
@@ -759,6 +768,8 @@ export default function App() {
   ) => {
     if (!selectedPaymentPlan) return;
 
+    const amountPaid = Math.round(selectedPaymentPlan.price * 1.18 * 100); // price + 18% GST, in paise
+
     const transaction: PaymentTransaction = {
       id: paymentId,
       orderId,
@@ -766,7 +777,7 @@ export default function App() {
       gatewayPaymentId: paymentId,
       gatewaySignature: signature,
       planId: selectedPaymentPlan.id,
-      amount: 0,
+      amount: amountPaid,
       currency: selectedPaymentPlan.currency,
       status: 'success',
       email: userDetails.email,
@@ -776,13 +787,20 @@ export default function App() {
     };
 
     const now = new Date();
-    const endDate = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000); // 30 days trial
+    const endDate = new Date(now);
+    if (selectedPaymentPlan.interval === 'yearly') {
+      endDate.setFullYear(endDate.getFullYear() + 1);
+    } else if (selectedPaymentPlan.interval === 'quarterly') {
+      endDate.setMonth(endDate.getMonth() + 3);
+    } else {
+      endDate.setMonth(endDate.getMonth() + 1);
+    }
 
     const subscription: UserSubscription = {
-      id: `SUB-TRIAL-${Date.now().toString(36).toUpperCase()}`,
+      id: `SUB-${Date.now().toString(36).toUpperCase()}`,
       planId: selectedPaymentPlan.id,
       planType: selectedPaymentPlan.type,
-      status: 'trial',
+      status: 'active',
       startDate: now.toISOString(),
       endDate: endDate.toISOString(),
       paymentTransactionId: paymentId,
