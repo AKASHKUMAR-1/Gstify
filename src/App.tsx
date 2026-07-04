@@ -19,6 +19,7 @@ import TeamManagement from './components/TeamManagement';
 import ApiManagement from './components/ApiManagement';
 import AccountManager from './components/AccountManager';
 import { AuthModal } from './components/AuthModal';
+import { useLocalStorage, useLocalStorageString } from './lib/storage';
 import {
   PaymentService,
   SUBSCRIPTION_PLANS,
@@ -37,6 +38,9 @@ const PRODUCTS_KEY = 'gst_invoice_products';
 const INVOICE_SEQUENCE_KEY = 'gst_invoice_sequence_by_fy';
 const PLAN_KEY = 'gst_invoice_plan';
 const USAGE_KEY = 'gst_invoice_usage';
+const RECURRING_KEY = 'gst_invoice_recurring';
+const STATUSES_KEY = 'gst_invoice_statuses';
+const THEME_KEY = 'theme';
 
 type PlanTier = 'free' | 'basic' | 'premium' | 'enterprise' | 'pro';
 
@@ -84,11 +88,11 @@ export default function App() {
   const [isPreview, setIsPreview] = useState(false);
   const [isShareMenuOpen, setIsShareMenuOpen] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
-  const [invoiceHistory, setInvoiceHistory] = useState<InvoiceRecord[]>([]);
-  const [clients, setClients] = useState<ClientRecord[]>([]);
-  const [products, setProducts] = useState<ProductRecord[]>([]);
+  const [invoiceHistory, setInvoiceHistory] = useLocalStorage<InvoiceRecord[]>(HISTORY_KEY, []);
+  const [clients, setClients] = useLocalStorage<ClientRecord[]>(CLIENTS_KEY, []);
+  const [products, setProducts] = useLocalStorage<ProductRecord[]>(PRODUCTS_KEY, []);
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
-  const [planTier, setPlanTier] = useState<PlanTier>('free');
+  const [planTier, setPlanTier] = useLocalStorage<PlanTier>(PLAN_KEY, 'free');
   const [isTeamOpen, setIsTeamOpen] = useState(false);
   const [isApiOpen, setIsApiOpen] = useState(false);
   const [isManagerOpen, setIsManagerOpen] = useState(false);
@@ -162,7 +166,6 @@ export default function App() {
     setPlanTier(tier);
     setIsLoggedIn(true);
     localStorage.setItem('gstify_session', 'true');
-    localStorage.setItem(PLAN_KEY, tier);
     setShowLandingPage(false);
   };
 
@@ -256,9 +259,9 @@ export default function App() {
 
   const [selectedTemplate, setSelectedTemplate] = useState('default');
   const [isRecurringOpen, setIsRecurringOpen] = useState(false);
-  const [recurringTemplates, setRecurringTemplates] = useState<RecurringInvoiceTemplate[]>([]);
+  const [recurringTemplates, setRecurringTemplates] = useLocalStorage<RecurringInvoiceTemplate[]>(RECURRING_KEY, []);
   const [isStatusOpen, setIsStatusOpen] = useState(false);
-  const [invoiceStatuses, setInvoiceStatuses] = useState<InvoiceStatus[]>([]);
+  const [invoiceStatuses, setInvoiceStatuses] = useLocalStorage<InvoiceStatus[]>(STATUSES_KEY, []);
   const [isTemplateSelectorOpen, setIsTemplateSelectorOpen] = useState(false);
 
   const [activeFeature, setActiveFeature] = useState<string | null>(null);
@@ -675,7 +678,7 @@ export default function App() {
 
   const [isDarkMode, setIsDarkMode] = useState(() => {
     if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('theme');
+      const saved = localStorage.getItem(THEME_KEY);
       if (saved) return saved === 'dark';
       return window.matchMedia('(prefers-color-scheme: dark)').matches;
     }
@@ -723,10 +726,10 @@ export default function App() {
   useEffect(() => {
     if (isDarkMode) {
       document.documentElement.classList.add('dark');
-      localStorage.setItem('theme', 'dark');
+      localStorage.setItem(THEME_KEY, 'dark');
     } else {
       document.documentElement.classList.remove('dark');
-      localStorage.setItem('theme', 'light');
+      localStorage.setItem(THEME_KEY, 'light');
     }
   }, [isDarkMode]);
 
@@ -744,70 +747,8 @@ export default function App() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Load invoice history from local storage
-  useEffect(() => {
-    const saved = localStorage.getItem(HISTORY_KEY);
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        setInvoiceHistory(parsed);
-      } catch (e) {
-        console.error('Failed to parse invoice history');
-      }
-    }
-  }, []);
-
-  // Load saved clients
-  useEffect(() => {
-    const saved = localStorage.getItem(CLIENTS_KEY);
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        setClients(Array.isArray(parsed) ? parsed : []);
-      } catch {
-        console.error('Failed to parse clients');
-      }
-    }
-  }, []);
-
-  // Load saved products
-  useEffect(() => {
-    const saved = localStorage.getItem(PRODUCTS_KEY);
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        setProducts(Array.isArray(parsed) ? parsed : []);
-      } catch {
-        console.error('Failed to parse products');
-      }
-    }
-  }, []);
-
-  // Load recurring templates
-  useEffect(() => {
-    const saved = localStorage.getItem('gst_invoice_recurring');
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        setRecurringTemplates(Array.isArray(parsed) ? parsed : []);
-      } catch {
-        console.error('Failed to parse recurring templates');
-      }
-    }
-  }, []);
-
-  // Load invoice statuses
-  useEffect(() => {
-    const saved = localStorage.getItem('gst_invoice_statuses');
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        setInvoiceStatuses(Array.isArray(parsed) ? parsed : []);
-      } catch {
-        console.error('Failed to parse invoice statuses');
-      }
-    }
-  }, []);
+  // invoiceHistory, clients, products, recurringTemplates and invoiceStatuses are
+  // all loaded from localStorage automatically by useLocalStorage above.
 
   // Check for due recurring invoices on load
   useEffect(() => {
@@ -845,7 +786,6 @@ export default function App() {
     };
     const updated = [record, ...invoiceHistory].slice(0, historyLimit);
     setInvoiceHistory(updated);
-    localStorage.setItem(HISTORY_KEY, JSON.stringify(updated));
   };
 
   // Function to load invoice from history
@@ -858,12 +798,7 @@ export default function App() {
   const deleteFromHistory = (id: string) => {
     const updated = invoiceHistory.filter(record => record.id !== id);
     setInvoiceHistory(updated);
-    localStorage.setItem(HISTORY_KEY, JSON.stringify(updated));
   };
-
-  useEffect(() => {
-    localStorage.setItem(PLAN_KEY, planTier);
-  }, [planTier]);
 
   useEffect(() => {
     localStorage.setItem(USAGE_KEY, JSON.stringify(usage));
@@ -962,7 +897,6 @@ export default function App() {
     setPlanTier(planType);
     setIsLoggedIn(true);
     localStorage.setItem('gstify_session', 'true');
-    localStorage.setItem(PLAN_KEY, planType);
     setLastTransactionId(paymentId);
 
     // Close modals and show success
@@ -1012,7 +946,6 @@ export default function App() {
     );
     const updated = [record, ...deduped].slice(0, 200);
     setClients(updated);
-    localStorage.setItem(CLIENTS_KEY, JSON.stringify(updated));
   };
 
   const loadClientIntoBuyer = (clientId: string) => {
@@ -1053,7 +986,6 @@ export default function App() {
     );
     const updated = [product, ...deduped].slice(0, 500);
     setProducts(updated);
-    localStorage.setItem(PRODUCTS_KEY, JSON.stringify(updated));
   };
 
   const applyProductToItem = (productId: string, itemId: string) => {
@@ -1090,13 +1022,11 @@ export default function App() {
       updated = [template, ...recurringTemplates];
     }
     setRecurringTemplates(updated);
-    localStorage.setItem('gst_invoice_recurring', JSON.stringify(updated));
   };
 
   const deleteRecurringTemplate = (id: string) => {
     const updated = recurringTemplates.filter(t => t.id !== id);
     setRecurringTemplates(updated);
-    localStorage.setItem('gst_invoice_recurring', JSON.stringify(updated));
   };
 
   const generateFromRecurring = (template: RecurringInvoiceTemplate) => {
@@ -1158,7 +1088,6 @@ export default function App() {
       ];
     }
     setInvoiceStatuses(updated);
-    localStorage.setItem('gst_invoice_statuses', JSON.stringify(updated));
   };
 
   const sendPaymentReminder = (invoiceId: string, method: 'whatsapp' | 'email') => {
@@ -1334,7 +1263,6 @@ export default function App() {
       };
       const nextHistory = [record, ...invoiceHistory].slice(0, historyLimit);
       setInvoiceHistory(nextHistory);
-      localStorage.setItem(HISTORY_KEY, JSON.stringify(nextHistory));
 
       setUsage(prev => ({ ...prev, downloads: prev.downloads + 1 }));
       
