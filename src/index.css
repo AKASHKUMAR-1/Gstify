@@ -75,11 +75,12 @@
   --line: #e2e8f0;
   --line-strong: #cbd5e1;
 
-  --brand-50: #eef2ff;
-  --brand-100: #e0e7ff;
-  --brand-500: #6366f1;
-  --brand-600: #4f46e5;
-  --brand-700: #4338ca;
+  /* Brand — Royal Violet */
+  --brand-50: #f4f0fe;
+  --brand-100: #e9e0fd;
+  --brand-500: #7c3aed;
+  --brand-600: #6d28d9;
+  --brand-700: #5b21b6;
   --on-brand: #ffffff;
 }
 
@@ -95,11 +96,12 @@
   --line: #334155;
   --line-strong: #475569;
 
-  --brand-50: #1e1b4b;
-  --brand-100: #312e81;
-  --brand-500: #818cf8;
-  --brand-600: #6366f1;
-  --brand-700: #818cf8;
+  /* Brand — Royal Violet (dark) */
+  --brand-50: #2e1065;
+  --brand-100: #4c1d95;
+  --brand-500: #a78bfa;
+  --brand-600: #8b5cf6;
+  --brand-700: #c4b5fd;
   --on-brand: #ffffff;
 }
 
