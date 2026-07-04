@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { FileText, Download, Eye, Edit2, Moon, Sun, Share2, Printer, MessageCircle, Mail, History, Trash2, Copy, Send, Users, Terminal, X, Loader2 } from 'lucide-react';
+import { FileText, Download, Eye, Edit2, Moon, Sun, Share2, Printer, MessageCircle, Mail, History, Trash2, Copy, Send, Users, Terminal, X, Loader2, Menu } from 'lucide-react';
+import { Sidebar } from './components/layout/Sidebar';
 import { ClientRecord, InvoiceData, InvoiceRecord, ProductRecord, RecurringInvoiceTemplate, InvoiceStatus } from './types';
 import type { SubscriptionPlan, PaymentTransaction, UserSubscription, PlanType, SubscriptionStatus } from './types';
 import { InvoiceEditor } from './components/InvoiceEditor';
@@ -51,6 +52,7 @@ export default function App() {
   const [data, setData] = useState<InvoiceData>(createInitialInvoice);
   const [isPreview, setIsPreview] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isShareMenuOpen, setIsShareMenuOpen] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [invoiceHistory, setInvoiceHistory] = useLocalStorage<InvoiceRecord[]>(HISTORY_KEY, []);
@@ -1146,6 +1148,16 @@ export default function App() {
     }
   };
 
+  const viewTitle = isPreview
+    ? 'Invoice preview'
+    : activeFeature === 'recurring' ? 'Recurring invoices'
+    : activeFeature === 'status' ? 'Payment status'
+    : activeFeature === 'template' ? 'Templates'
+    : activeFeature === 'team' ? 'Team'
+    : activeFeature === 'api' ? 'API keys'
+    : activeFeature === 'history' ? 'Invoice history'
+    : 'Create invoice';
+
   return (
     <>
     <div className="min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 font-sans transition-colors duration-200 flex flex-col">
@@ -1715,62 +1727,42 @@ export default function App() {
           </footer>
         </main>
       ) : (
-        <>
-          {/* Top Navigation Bar - Hidden when printing */}
-          <nav className="bg-surface-1/95 backdrop-blur-xl border-b border-line sticky top-0 z-50 print:hidden shadow-sm">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 min-h-[4rem] py-2 flex items-center justify-between flex-wrap gap-y-3">
-              <div className="flex items-center gap-4">
-                <button 
-                  onClick={() => setShowLandingPage(true)}
-                  className="flex items-center gap-1 text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-amber-500 transition-colors text-sm font-medium"
+        <div className="flex min-h-screen bg-surface-0">
+          <Sidebar
+            activeFeature={activeFeature}
+            onSelectEditor={closeAllFeatures}
+            onToggleFeature={toggleFeature}
+            isEnterprise={planTier === 'enterprise'}
+            isPremium={isPremium}
+            planLabel={userSubscription?.planType === 'enterprise' ? 'Enterprise' : 'Pro'}
+            daysRemaining={userSubscription ? getSubscriptionDaysRemaining(userSubscription) : null}
+            usageDownloads={usage.downloads}
+            freeLimit={FREE_LIMITS.monthlyDownloads}
+            onUpgrade={() => handlePlanSelect(SUBSCRIPTION_PLANS.find(p => p.type === 'pro')!)}
+            isDarkMode={isDarkMode}
+            onToggleDark={() => setIsDarkMode(!isDarkMode)}
+            onHome={() => setShowLandingPage(true)}
+            recurringDue={recurringTemplates.some(t => t.isActive && t.nextDueDate <= new Date().toISOString().split('T')[0])}
+            historyCount={invoiceHistory.length}
+            mobileOpen={sidebarOpen}
+            onCloseMobile={() => setSidebarOpen(false)}
+          />
+          <div className="flex-1 flex flex-col min-w-0">
+          {/* Slim contextual topbar */}
+          <header className="bg-surface-1/95 backdrop-blur-xl border-b border-line sticky top-0 z-40 print:hidden">
+            <div className="h-16 px-4 sm:px-6 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2 min-w-0">
+                <button
+                  onClick={() => setSidebarOpen(true)}
+                  className="md:hidden p-2 -ml-1 rounded-[10px] text-content-secondary hover:bg-surface-2"
+                  aria-label="Open menu"
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
-                  Home
+                  <Menu size={20} />
                 </button>
-                <div 
-                  className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity"
-                  onClick={() => setShowLandingPage(true)}
-                  title="Back to Landing Page"
-                >
-                <svg viewBox="0 0 200 50" height="32" className="drop-shadow-sm">
-                  <defs>
-                    <linearGradient id="goldGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                      <stop offset="0%" stopColor="#d4af37" stopOpacity="1" />
-                      <stop offset="50%" stopColor="#f3e5ab" stopOpacity="1" />
-                      <stop offset="100%" stopColor="#c5a028" stopOpacity="1" />
-                    </linearGradient>
-                    <linearGradient id="blueGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                      <stop offset="0%" stopColor="#0f172a" stopOpacity="1" />
-                      <stop offset="100%" stopColor="#334155" stopOpacity="1" />
-                    </linearGradient>
-                  </defs>
-                  <g transform="translate(0, 2) scale(0.45)">
-                    <path d="M20,0 L70,0 L90,20 L90,90 Q90,100 80,100 L20,100 Q10,100 10,90 L10,10 Q10,0 20,0 Z" className="fill-slate-200 dark:fill-slate-700" />
-                    <path d="M70,0 L70,20 L90,20" className="fill-slate-300 dark:fill-slate-600" opacity="0.5"/>
-                    <path d="M50,35 C35,35 25,45 25,55 C25,75 50,90 50,90 C50,90 75,75 75,55 C75,45 65,35 50,35 Z" fill="url(#goldGradient)" />
-                    <text x="50" y="68" fontFamily="Arial, sans-serif" fontWeight="bold" fontSize="32" fill="white" textAnchor="middle">{'\u20B9'}</text>
-                    <circle cx="85" cy="15" r="12" fill="#10b981" stroke="white" strokeWidth="2"/>
-                    <path d="M79,15 L83,19 L91,11" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
-                  </g>
-                  <text x="55" y="32" fontFamily="'Playfair Display', serif" fontWeight="700" fontSize="26" className="fill-slate-900 dark:fill-white" letterSpacing="-0.5">
-                    GSTify
-                  </text>
-                  <text x="56" y="43" fontFamily="'Outfit', sans-serif" fontWeight="500" fontSize="8" className="fill-slate-500 dark:fill-slate-400" letterSpacing="1.2">
-                    INVOICE GENERATOR
-                  </text>
-                </svg>
-                </div>
+                <h1 className="text-base sm:text-lg font-semibold text-content-primary truncate">{viewTitle}</h1>
               </div>
 
-              <div className="flex items-center gap-1.5 sm:gap-2.5 ml-auto px-2 sm:px-4 flex-wrap">
-                <button
-                  onClick={() => setIsDarkMode(!isDarkMode)}
-                  className="flex-shrink-0 p-2 text-content-secondary hover:bg-surface-2 hover:text-content-primary rounded-[10px] transition-colors"
-                  aria-label="Toggle dark mode"
-                >
-                  {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
-                </button>
-
+              <div className="flex items-center gap-2">
                 {isPreview ? (
                   <button
                     onClick={() => setIsPreview(false)}
@@ -1796,142 +1788,6 @@ export default function App() {
                   <Printer size={16} /> 
                   <span>Print</span>
                 </button>
-
-                <button
-                  onClick={() => toggleFeature('recurring')}
-                  aria-pressed={activeFeature === 'recurring'}
-                  className={`${TOOLBAR_BTN} ${activeFeature === 'recurring' ? TOOLBAR_BTN_ACTIVE : TOOLBAR_BTN_IDLE}`}
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                  <span className="hidden lg:inline">Recurring</span>
-                  {recurringTemplates.some(t => t.isActive && t.nextDueDate <= new Date().toISOString().split('T')[0]) && (
-                    <span className="flex h-2 w-2 relative -ml-1 -mt-2">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
-                    </span>
-                  )}
-                </button>
-
-                <button
-                  onClick={() => toggleFeature('status')}
-                  aria-pressed={activeFeature === 'status'}
-                  className={`${TOOLBAR_BTN} ${activeFeature === 'status' ? TOOLBAR_BTN_ACTIVE : TOOLBAR_BTN_IDLE}`}
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                  <span className="hidden lg:inline">Status</span>
-                </button>
-
-                <button
-                  onClick={() => toggleFeature('template')}
-                  aria-pressed={activeFeature === 'template'}
-                  className={`${TOOLBAR_BTN} ${activeFeature === 'template' ? TOOLBAR_BTN_ACTIVE : TOOLBAR_BTN_IDLE}`}
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>
-                  <span className="hidden lg:inline">Template</span>
-                </button>
-
-                {planTier === 'enterprise' && (
-                  <>
-                    <button
-                      onClick={() => toggleFeature('team')}
-                      aria-pressed={activeFeature === 'team'}
-                      className={`${TOOLBAR_BTN} ${activeFeature === 'team' ? TOOLBAR_BTN_ACTIVE : TOOLBAR_BTN_IDLE}`}
-                    >
-                      <Users size={16} />
-                      <span className="hidden lg:inline">Team</span>
-                    </button>
-                    <button
-                      onClick={() => toggleFeature('api')}
-                      aria-pressed={activeFeature === 'api'}
-                      className={`${TOOLBAR_BTN} ${activeFeature === 'api' ? TOOLBAR_BTN_ACTIVE : TOOLBAR_BTN_IDLE}`}
-                    >
-                      <Terminal size={16} />
-                      <span className="hidden md:inline">API</span>
-                    </button>
-                  </>
-                )}
-
-                <div className="relative" ref={historyRef}>
-                  <button
-                    onClick={() => toggleFeature('history')}
-                    aria-pressed={activeFeature === 'history'}
-                    className={`${TOOLBAR_BTN} relative ${activeFeature === 'history' ? TOOLBAR_BTN_ACTIVE : TOOLBAR_BTN_IDLE}`}
-                  >
-                    <History size={16} /> <span className="hidden sm:inline">History</span>
-                    {invoiceHistory.length > 0 && (
-                      <span className="absolute -top-1 -right-1 bg-brand-600 text-on-brand text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                        {invoiceHistory.length}
-                      </span>
-                    )}
-                  </button>
-                  {activeFeature === 'history' && (
-                    <div className="absolute right-0 mt-2 w-80 bg-white dark:bg-slate-800 rounded-md shadow-lg border border-slate-200 dark:border-slate-700 z-50 max-h-96 overflow-y-auto">
-                      {invoiceHistory.length === 0 ? (
-                        <div className="p-4 text-center text-slate-500 dark:text-slate-400 text-sm">
-                          No invoice history yet. Download an invoice to save it to history.
-                        </div>
-                      ) : (
-                        <div className="py-1">
-                          {invoiceHistory.map((record) => (
-                            <div key={record.id} className="flex items-center justify-between px-4 py-2 hover:bg-slate-50 dark:hover:bg-slate-700 border-b border-slate-100 dark:border-slate-700 last:border-b-0">
-                              <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium text-slate-900 dark:text-slate-100 truncate">
-                                  {record.data.meta.invoiceNumber}
-                                </p>
-                                <p className="text-xs text-slate-500 dark:text-slate-400">
-                                  {new Date(record.createdAt).toLocaleDateString()}
-                                </p>
-                              </div>
-                              <div className="flex items-center gap-1 ml-2">
-                                <button
-                                  onClick={() => loadFromHistory(record)}
-                                  className="p-1 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-slate-600 rounded transition-colors"
-                                  title="Load this invoice"
-                                >
-                                  <Copy size={14} />
-                                </button>
-                                <button
-                                  onClick={() => deleteFromHistory(record.id)}
-                                  className="p-1 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-slate-600 rounded transition-colors"
-                                  title="Delete this invoice"
-                                >
-                                  <Trash2 size={14} />
-                                </button>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-
-                <div className="hidden md:flex flex-shrink-0 items-center gap-2 px-3 py-1.5 rounded-md border border-slate-300 dark:border-slate-600 text-xs">
-                  {isPremium ? (
-                    <span className="font-semibold uppercase tracking-wide text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
-                      {'\u2728'} {userSubscription?.planType === 'enterprise' ? 'Enterprise' : 'PRO'}
-                      {userSubscription && (
-                        <span className="text-slate-400 dark:text-slate-500 font-normal normal-case ml-1">
-                          {getSubscriptionDaysRemaining(userSubscription)}d left
-                        </span>
-                      )}
-                    </span>
-                  ) : (
-                    <>
-                      <span className="font-semibold uppercase tracking-wide">FREE</span>
-                      <span className="text-slate-500 dark:text-slate-400">
-                        {usage.downloads}/{FREE_LIMITS.monthlyDownloads} downloads
-                      </span>
-                      <button
-                        onClick={() => handlePlanSelect(SUBSCRIPTION_PLANS.find(p => p.type === 'pro')!)}
-                        className="px-2 py-1 rounded bg-gradient-to-r from-indigo-500 to-blue-500 text-white font-semibold hover:from-indigo-600 hover:to-blue-600 transition-all"
-                      >
-                        {'\u26A1'} Upgrade
-                      </button>
-                    </>
-                  )}
-                </div>
-
 
                 <div className="relative" ref={shareMenuRef}>
                   <button
@@ -1971,9 +1827,9 @@ export default function App() {
                 </button>
               </div>
             </div>
-          </nav>
+          </header>
 
-      <main className="p-4 sm:p-8">
+      <main className="flex-1 p-4 sm:p-8">
         {isPreview ? (
           <div id="invoice-capture-area" className="print:m-0 print:p-0">
             {isPremium ? (
@@ -1984,10 +1840,11 @@ export default function App() {
           </div>
         ) : (
           <div className="print:hidden">
-            <div className="max-w-5xl mx-auto mb-6">
-              <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Create Invoice</h1>
-              <p className="text-slate-500 dark:text-slate-400 mt-1">Fill in the details below. Seller details are automatically saved to your browser.</p>
-            </div>
+            {!isRecurringOpen && !isStatusOpen && !isTemplateSelectorOpen && !isTeamOpen && !isApiOpen && !isHistoryOpen && (
+              <div className="max-w-5xl mx-auto mb-6">
+                <p className="text-content-secondary">Fill in the details below. Seller details are saved to your browser automatically.</p>
+              </div>
+            )}
             {Object.keys(validationErrors).length > 0 && (
               <div className="max-w-5xl mx-auto mb-4 rounded-md border border-red-200 bg-red-50 text-red-700 px-4 py-3 text-sm">
                 <p className="font-semibold mb-1">Please fix these issues:</p>
@@ -2070,8 +1927,39 @@ export default function App() {
               </div>
             </div>
 
+            <div className={!isHistoryOpen ? 'hidden' : ''}>
+              <div className="mt-6 max-w-5xl mx-auto">
+                {invoiceHistory.length === 0 ? (
+                  <div className="rounded-[12px] border border-line bg-surface-1 p-10 text-center">
+                    <History size={28} className="mx-auto text-content-muted" />
+                    <p className="mt-3 text-content-primary font-medium">No invoices yet</p>
+                    <p className="text-sm text-content-muted mt-1">Download an invoice and it will be saved here.</p>
+                  </div>
+                ) : (
+                  <div className="rounded-[12px] border border-line bg-surface-1 divide-y divide-line overflow-hidden">
+                    {invoiceHistory.map((record) => (
+                      <div key={record.id} className="flex items-center justify-between px-4 py-3 hover:bg-surface-2 transition-colors">
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium text-content-primary truncate">{record.data.meta.invoiceNumber}</p>
+                          <p className="text-xs text-content-muted">{new Date(record.createdAt).toLocaleDateString()} · {record.data.buyer.name || 'No client'}</p>
+                        </div>
+                        <div className="flex items-center gap-1 ml-2">
+                          <button onClick={() => loadFromHistory(record)} className="p-2 rounded-[10px] text-brand-600 hover:bg-brand-50 transition-colors" title="Load this invoice" aria-label="Load invoice">
+                            <Copy size={16} />
+                          </button>
+                          <button onClick={() => deleteFromHistory(record.id)} className="p-2 rounded-[10px] text-red-600 hover:bg-red-50 dark:hover:bg-surface-2 transition-colors" title="Delete this invoice" aria-label="Delete invoice">
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
             {/* Main Editor View - Hidden when a major secondary view is open */}
-            <div className={isRecurringOpen || isStatusOpen || isTemplateSelectorOpen || isTeamOpen || isApiOpen ? 'hidden' : ''}>
+            <div className={isRecurringOpen || isStatusOpen || isTemplateSelectorOpen || isTeamOpen || isApiOpen || isHistoryOpen ? 'hidden' : ''}>
               <div className="max-w-5xl mx-auto space-y-8">
                 {planTier === 'enterprise' && (
                   <AccountManager />
@@ -2092,7 +1980,8 @@ export default function App() {
           </div>
         )}
       </main>
-         </>
+          </div>
+        </div>
       )}
 
       {/* ==================== PAYMENT MODALS ==================== */}
