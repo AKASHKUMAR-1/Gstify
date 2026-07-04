@@ -18,6 +18,7 @@ import TeamManagement from './components/TeamManagement';
 import ApiManagement from './components/ApiManagement';
 import AccountManager from './components/AccountManager';
 import { AuthModal } from './components/AuthModal';
+import { useAuth } from './features/auth/useAuth';
 import { useLocalStorage, useLocalStorageString } from './lib/storage';
 import { getSuggestedInvoiceNumber, reserveNextInvoiceNumber } from './features/invoices/invoiceNumber';
 import { validateInvoice as runInvoiceValidation } from './features/invoices/validation';
@@ -63,9 +64,7 @@ export default function App() {
   const [isTeamOpen, setIsTeamOpen] = useState(false);
   const [isApiOpen, setIsApiOpen] = useState(false);
   const [isManagerOpen, setIsManagerOpen] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(() => {
-    return localStorage.getItem('gstify_session') === 'true';
-  });
+  const { isLoggedIn, signOut } = useAuth();
   const [usage, setUsage] = useState(() => {
     const month = new Date().toISOString().slice(0, 7);
     const saved = localStorage.getItem(USAGE_KEY);
@@ -131,8 +130,6 @@ export default function App() {
     saveSubscription(subscription);
     setUserSubscription(subscription);
     setPlanTier(tier);
-    setIsLoggedIn(true);
-    localStorage.setItem('gstify_session', 'true');
     setShowLandingPage(false);
   };
 
@@ -153,11 +150,18 @@ export default function App() {
     }
   };
 
-  const handleAuthSuccess = (name: string, email: string) => {
+  const handleAuthSuccess = (mode: 'signup' | 'login') => {
     setIsAuthOpen(false);
+    if (mode === 'login') {
+      // Returning user: resume their existing plan instead of granting a new trial.
+      const sub = loadSubscription();
+      if (sub) setPlanTier(sub.planType as PlanTier);
+      setShowLandingPage(false);
+      return;
+    }
     const targetTier = selectedPlanOnLanding || 'pro'; // Default to pro trial
     activatePlanFree(targetTier);
-    alert(`🎉 Welcome ${name}!\n\nYour 30-Day Free Trial for the ${targetTier.toUpperCase()} Plan is now active!`);
+    alert(`🎉 Welcome!\n\nYour 30-Day Free Trial for the ${targetTier.toUpperCase()} Plan is now active!`);
   };
 
   // Runs pure validation and syncs the resulting errors into local state.
@@ -805,8 +809,6 @@ export default function App() {
     const planType = selectedPaymentPlan.type;
     setUserSubscription(subscription);
     setPlanTier(planType);
-    setIsLoggedIn(true);
-    localStorage.setItem('gstify_session', 'true');
     setLastTransactionId(paymentId);
 
     // Close modals and show success
@@ -1184,29 +1186,18 @@ export default function App() {
                 <a href="#features" className="text-slate-600 dark:text-slate-400 hover:text-brand-600 transition-colors duration-200">Features</a>
                 <a href="#pricing" className="text-slate-600 dark:text-slate-400 hover:text-brand-600 transition-colors duration-200">Pricing</a>
                 {isLoggedIn ? (
-                  <button 
+                  <button
                     onClick={() => {
-                      setIsLoggedIn(false);
+                      signOut();
                       setPlanTier('free');
-                      localStorage.removeItem('gstify_session');
                     }}
                     className="text-red-500 hover:text-red-600 transition-colors duration-200"
                   >
                     Logout
                   </button>
                 ) : (
-                  <button 
-                    onClick={() => {
-                      const sub = loadSubscription();
-                      if (sub && isSubscriptionActive(sub)) {
-                        setIsLoggedIn(true);
-                        localStorage.setItem('gstify_session', 'true');
-                        setPlanTier(sub.planType as PlanTier);
-                        setShowLandingPage(false);
-                      } else {
-                        alert("Please buy a plan first or use 'Get Started' for free version.");
-                      }
-                    }}
+                  <button
+                    onClick={() => setIsAuthOpen(true)}
                     className="text-brand-600 hover:text-brand-700 transition-colors duration-200"
                   >
                     Login
