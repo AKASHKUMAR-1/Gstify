@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { FileText, Download, Eye, Edit2, Moon, Sun, Share2, Printer, MessageCircle, Mail, History, Trash2, Copy, Send, Users, Terminal, X } from 'lucide-react';
+import { FileText, Download, Eye, Edit2, Moon, Sun, Share2, Printer, MessageCircle, Mail, History, Trash2, Copy, Send, Users, Terminal, X, Loader2 } from 'lucide-react';
 import { ClientRecord, InvoiceData, InvoiceRecord, ProductRecord, RecurringInvoiceTemplate, InvoiceStatus } from './types';
 import type { SubscriptionPlan, PaymentTransaction, UserSubscription, PlanType, SubscriptionStatus } from './types';
 import { InvoiceEditor } from './components/InvoiceEditor';
@@ -37,9 +37,20 @@ import {
   activateEarlyBirdTrial,
 } from './utils/paymentGateway';
 
+// Shared toolbar button styles. Feature toggles all share one neutral look
+// with a single brand-tinted active state, instead of each button carrying
+// its own colour — keeps the toolbar calm and consistent.
+const TOOLBAR_BTN =
+  'flex-shrink-0 flex items-center gap-2 px-3 sm:px-4 py-2 text-sm font-medium rounded-[10px] transition-colors';
+const TOOLBAR_BTN_IDLE =
+  'bg-surface-1 text-content-secondary border border-line hover:bg-surface-2 hover:text-content-primary';
+const TOOLBAR_BTN_ACTIVE =
+  'bg-brand-50 text-brand-700 ring-1 ring-brand-500 border border-transparent';
+
 export default function App() {
   const [data, setData] = useState<InvoiceData>(createInitialInvoice);
   const [isPreview, setIsPreview] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
   const [isShareMenuOpen, setIsShareMenuOpen] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [invoiceHistory, setInvoiceHistory] = useLocalStorage<InvoiceRecord[]>(HISTORY_KEY, []);
@@ -1009,11 +1020,13 @@ export default function App() {
   };
 
   const handleDownload = async () => {
+    if (isDownloading) return;
     try {
       if (!isPremium && usage.downloads >= FREE_LIMITS.monthlyDownloads) {
         alert(`Free plan monthly download limit (${FREE_LIMITS.monthlyDownloads}) reached. Upgrade to Premium for unlimited downloads.`);
         return;
       }
+      setIsDownloading(true);
 
       // Validation
       const validation = validateInvoice(data);
@@ -1064,6 +1077,8 @@ export default function App() {
     } catch (error) {
       console.error('\u274C Download error:', error);
       alert(`\u274C Error downloading PDF: ${(error as Error).message}`);
+    } finally {
+      setIsDownloading(false);
     }
   };
 
@@ -1702,7 +1717,7 @@ export default function App() {
       ) : (
         <>
           {/* Top Navigation Bar - Hidden when printing */}
-          <nav className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-b border-slate-200 dark:border-slate-700 sticky top-0 z-50 print:hidden transition-colors duration-200 shadow-sm">
+          <nav className="bg-surface-1/95 backdrop-blur-xl border-b border-line sticky top-0 z-50 print:hidden shadow-sm">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 min-h-[4rem] py-2 flex items-center justify-between flex-wrap gap-y-3">
               <div className="flex items-center gap-4">
                 <button 
@@ -1750,8 +1765,8 @@ export default function App() {
               <div className="flex items-center gap-1.5 sm:gap-2.5 ml-auto px-2 sm:px-4 flex-wrap">
                 <button
                   onClick={() => setIsDarkMode(!isDarkMode)}
-                  className="flex-shrink-0 p-2 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-all duration-200 hover:scale-105"
-                  aria-label="Toggle Dark Mode"
+                  className="flex-shrink-0 p-2 text-content-secondary hover:bg-surface-2 hover:text-content-primary rounded-[10px] transition-colors"
+                  aria-label="Toggle dark mode"
                 >
                   {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
                 </button>
@@ -1759,24 +1774,24 @@ export default function App() {
                 {isPreview ? (
                   <button
                     onClick={() => setIsPreview(false)}
-                    className="flex-shrink-0 flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 text-sm font-medium text-white bg-indigo-600 dark:bg-indigo-500 rounded-lg hover:bg-indigo-700 dark:hover:bg-indigo-600 transition-all duration-200 hover:scale-105 print:hidden shadow-sm"
+                    className={`${TOOLBAR_BTN} ${TOOLBAR_BTN_IDLE} print:hidden`}
                   >
-                    <Edit2 size={16} /> 
+                    <Edit2 size={16} />
                     <span className="hidden sm:inline">Back to Edit</span>
                   </button>
                 ) : (
                   <button
                     onClick={() => setIsPreview(true)}
-                    className="flex-shrink-0 flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 text-sm font-medium text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-all duration-200 hover:scale-105 shadow-sm"
+                    className={`${TOOLBAR_BTN} ${TOOLBAR_BTN_IDLE}`}
                   >
-                    <Eye size={16} /> 
+                    <Eye size={16} />
                     <span className="hidden sm:inline">Preview</span>
                   </button>
                 )}
-                
+
                 <button
                   onClick={handlePrint}
-                  className="hidden sm:flex flex-shrink-0 items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 text-sm font-medium text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-all duration-200 hover:scale-105 print:hidden shadow-sm"
+                  className={`hidden sm:flex ${TOOLBAR_BTN} ${TOOLBAR_BTN_IDLE} print:hidden`}
                 >
                   <Printer size={16} /> 
                   <span>Print</span>
@@ -1784,11 +1799,8 @@ export default function App() {
 
                 <button
                   onClick={() => toggleFeature('recurring')}
-                  className={`flex-shrink-0 flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 text-sm font-medium rounded-lg transition-all duration-200 hover:scale-105 shadow-sm ${
-                    activeFeature === 'recurring'
-                      ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/60 dark:text-indigo-300 ring-2 ring-indigo-500'
-                      : 'text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-900/40 border border-indigo-200 dark:border-indigo-800 hover:bg-indigo-100'
-                  }`}
+                  aria-pressed={activeFeature === 'recurring'}
+                  className={`${TOOLBAR_BTN} ${activeFeature === 'recurring' ? TOOLBAR_BTN_ACTIVE : TOOLBAR_BTN_IDLE}`}
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                   <span className="hidden lg:inline">Recurring</span>
@@ -1802,11 +1814,8 @@ export default function App() {
 
                 <button
                   onClick={() => toggleFeature('status')}
-                  className={`flex-shrink-0 flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 text-sm font-medium rounded-lg transition-all duration-200 hover:scale-105 shadow-sm ${
-                    activeFeature === 'status'
-                      ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/60 dark:text-amber-300 ring-2 ring-amber-500'
-                      : 'text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/40 border border-amber-200 dark:border-amber-800 hover:bg-amber-100'
-                  }`}
+                  aria-pressed={activeFeature === 'status'}
+                  className={`${TOOLBAR_BTN} ${activeFeature === 'status' ? TOOLBAR_BTN_ACTIVE : TOOLBAR_BTN_IDLE}`}
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                   <span className="hidden lg:inline">Status</span>
@@ -1814,11 +1823,8 @@ export default function App() {
 
                 <button
                   onClick={() => toggleFeature('template')}
-                  className={`flex-shrink-0 flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 text-sm font-medium rounded-lg transition-all duration-200 hover:scale-105 shadow-sm ${
-                    activeFeature === 'template'
-                      ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/60 dark:text-purple-300 ring-2 ring-purple-500'
-                      : 'text-purple-700 dark:text-purple-300 bg-purple-50 dark:bg-purple-900/40 border border-purple-200 dark:border-purple-800 hover:bg-purple-100'
-                  }`}
+                  aria-pressed={activeFeature === 'template'}
+                  className={`${TOOLBAR_BTN} ${activeFeature === 'template' ? TOOLBAR_BTN_ACTIVE : TOOLBAR_BTN_IDLE}`}
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>
                   <span className="hidden lg:inline">Template</span>
@@ -1828,22 +1834,16 @@ export default function App() {
                   <>
                     <button
                       onClick={() => toggleFeature('team')}
-                      className={`flex-shrink-0 flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 text-sm font-medium rounded-lg transition-all duration-200 hover:scale-105 shadow-sm ${
-                        activeFeature === 'team'
-                          ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/60 dark:text-emerald-300 ring-2 ring-emerald-500'
-                          : 'text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-900/40 border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100'
-                      }`}
+                      aria-pressed={activeFeature === 'team'}
+                      className={`${TOOLBAR_BTN} ${activeFeature === 'team' ? TOOLBAR_BTN_ACTIVE : TOOLBAR_BTN_IDLE}`}
                     >
                       <Users size={16} />
                       <span className="hidden lg:inline">Team</span>
                     </button>
                     <button
                       onClick={() => toggleFeature('api')}
-                      className={`flex-shrink-0 flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 text-sm font-medium rounded-lg transition-all duration-200 hover:scale-105 shadow-sm ${
-                        activeFeature === 'api'
-                          ? 'bg-slate-100 text-slate-700 dark:bg-slate-900/60 dark:text-slate-300 ring-2 ring-slate-500'
-                          : 'text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-100'
-                      }`}
+                      aria-pressed={activeFeature === 'api'}
+                      className={`${TOOLBAR_BTN} ${activeFeature === 'api' ? TOOLBAR_BTN_ACTIVE : TOOLBAR_BTN_IDLE}`}
                     >
                       <Terminal size={16} />
                       <span className="hidden md:inline">API</span>
@@ -1854,15 +1854,12 @@ export default function App() {
                 <div className="relative" ref={historyRef}>
                   <button
                     onClick={() => toggleFeature('history')}
-                    className={`flex-shrink-0 flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md transition-colors relative ${
-                      activeFeature === 'history'
-                        ? 'bg-slate-100 text-slate-700 dark:bg-slate-900/60 dark:text-slate-300 ring-2 ring-slate-500 animate-pulse'
-                        : 'text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 hover:bg-slate-50'
-                    }`}
+                    aria-pressed={activeFeature === 'history'}
+                    className={`${TOOLBAR_BTN} relative ${activeFeature === 'history' ? TOOLBAR_BTN_ACTIVE : TOOLBAR_BTN_IDLE}`}
                   >
                     <History size={16} /> <span className="hidden sm:inline">History</span>
                     {invoiceHistory.length > 0 && (
-                      <span className="absolute -top-1 -right-1 bg-indigo-600 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                      <span className="absolute -top-1 -right-1 bg-brand-600 text-on-brand text-xs rounded-full w-5 h-5 flex items-center justify-center">
                         {invoiceHistory.length}
                       </span>
                     )}
@@ -1939,7 +1936,9 @@ export default function App() {
                 <div className="relative" ref={shareMenuRef}>
                   <button
                     onClick={() => setIsShareMenuOpen(!isShareMenuOpen)}
-                    className="flex-shrink-0 flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 text-sm font-medium text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-all duration-200 hover:scale-105 print:hidden shadow-sm"
+                    aria-haspopup="menu"
+                    aria-expanded={isShareMenuOpen}
+                    className={`${TOOLBAR_BTN} ${TOOLBAR_BTN_IDLE} print:hidden`}
                   >
                     <Share2 size={16} /> <span className="hidden sm:inline">Share</span>
                   </button>
@@ -1963,10 +1962,12 @@ export default function App() {
 
                 <button
                   onClick={handleDownload}
-                  className="flex-shrink-0 flex items-center gap-1.5 sm:gap-2 px-4 sm:px-5 py-1.5 sm:py-2 text-sm font-semibold text-white bg-amber-600 hover:bg-amber-500 rounded-lg transition-all duration-200 hover:scale-105 print:hidden shadow-md"
+                  disabled={isDownloading}
+                  aria-busy={isDownloading}
+                  className="flex-shrink-0 flex items-center gap-2 px-4 sm:px-5 py-2 text-sm font-semibold text-white bg-amber-600 hover:bg-amber-500 rounded-[10px] transition-colors print:hidden shadow-sm disabled:opacity-70 disabled:cursor-not-allowed"
                 >
-                  <Download size={16} /> 
-                  <span className="hidden sm:inline">Download PDF</span>
+                  {isDownloading ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
+                  <span className="hidden sm:inline">{isDownloading ? 'Generating…' : 'Download PDF'}</span>
                 </button>
               </div>
             </div>
