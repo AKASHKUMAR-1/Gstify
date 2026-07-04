@@ -80,6 +80,9 @@ export const InvoiceTemplatePremium: React.FC<Props> = ({ data, template }) => {
     <div className="w-full max-w-[800px] mx-auto bg-white shadow-lg print:shadow-none">
       {/* Header */}
       <div style={{ background: `linear-gradient(135deg, ${c[0]}, ${c[1]})`, padding: '32px 38px' }}>
+        {seller.logo && (
+          <img src={seller.logo} alt="Logo" style={{ height: '48px', maxWidth: '160px', objectFit: 'contain', marginBottom: '14px' }} />
+        )}
         <h1 style={{ fontFamily: font, fontSize: '26px', fontWeight: 700, color: isLight ? textColor : '#fff', marginBottom: '6px' }}>
           {seller.name || 'Business Name'}
         </h1>
@@ -186,8 +189,13 @@ export const InvoiceTemplatePremium: React.FC<Props> = ({ data, template }) => {
           This is a computer-generated invoice. E & OE.
         </div>
         <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: '10.5px', color: mutedColor, marginBottom: '28px' }}>Authorised Signatory</div>
-          <div style={{ width: '110px', borderTop: '1px solid #000' }}></div>
+          {seller.signature ? (
+            <img src={seller.signature} alt="Signature" style={{ height: '48px', maxWidth: '150px', objectFit: 'contain', marginBottom: '6px' }} />
+          ) : (
+            <div style={{ height: '48px' }} />
+          )}
+          <div style={{ width: '110px', borderTop: '1px solid #000', marginBottom: '6px' }}></div>
+          <div style={{ fontSize: '10.5px', color: mutedColor }}>Authorised Signatory</div>
         </div>
       </div>
     </div>
