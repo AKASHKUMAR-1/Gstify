@@ -19,12 +19,15 @@ import ApiManagement from './components/ApiManagement';
 import AccountManager from './components/AccountManager';
 import { AuthModal } from './components/AuthModal';
 import { useAuth } from './features/auth/useAuth';
+import { useClients } from './features/clients/useClients';
+import { useProducts } from './features/products/useProducts';
+import { useInvoiceHistory } from './features/invoices/useInvoiceHistory';
 import { useLocalStorage, useLocalStorageString } from './lib/storage';
 import { getSuggestedInvoiceNumber, reserveNextInvoiceNumber } from './features/invoices/invoiceNumber';
 import { validateInvoice as runInvoiceValidation } from './features/invoices/validation';
 import { generatePdfBlob } from './features/invoices/pdf';
 import {
-  STORAGE_KEY, HISTORY_KEY, CLIENTS_KEY, PRODUCTS_KEY, PLAN_KEY, USAGE_KEY,
+  STORAGE_KEY, PLAN_KEY, USAGE_KEY,
   RECURRING_KEY, STATUSES_KEY, THEME_KEY, FREE_LIMITS, createInitialInvoice,
 } from './config/constants';
 import type { PlanTier } from './config/constants';
@@ -56,15 +59,16 @@ export default function App() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isShareMenuOpen, setIsShareMenuOpen] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
-  const [invoiceHistory, setInvoiceHistory] = useLocalStorage<InvoiceRecord[]>(HISTORY_KEY, []);
-  const [clients, setClients] = useLocalStorage<ClientRecord[]>(CLIENTS_KEY, []);
-  const [products, setProducts] = useLocalStorage<ProductRecord[]>(PRODUCTS_KEY, []);
+  const { isLoggedIn, user, signOut } = useAuth();
+  const userId = user?.id ?? null;
+  const [invoiceHistory, setInvoiceHistory] = useInvoiceHistory(userId);
+  const [clients, setClients] = useClients(userId);
+  const [products, setProducts] = useProducts(userId);
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
   const [planTier, setPlanTier] = useLocalStorage<PlanTier>(PLAN_KEY, 'free');
   const [isTeamOpen, setIsTeamOpen] = useState(false);
   const [isApiOpen, setIsApiOpen] = useState(false);
   const [isManagerOpen, setIsManagerOpen] = useState(false);
-  const { isLoggedIn, signOut } = useAuth();
   const [usage, setUsage] = useState(() => {
     const month = new Date().toISOString().slice(0, 7);
     const saved = localStorage.getItem(USAGE_KEY);
