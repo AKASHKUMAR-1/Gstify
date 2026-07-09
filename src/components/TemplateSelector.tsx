@@ -40,13 +40,13 @@ export const TemplateSelector: React.FC<Props> = ({
   ];
 
   return (
-    <div className="bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-slate-200 dark:border-slate-700 p-6">
+    <div className="bg-surface-1 rounded-[12px] shadow-sm border border-line p-6">
       <div className="flex justify-between items-center mb-6">
-        <h2 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
-          <Palette size={24} className="text-indigo-600 dark:text-indigo-400" />
+        <h2 className="text-xl font-semibold text-content-primary flex items-center gap-2">
+          <Palette size={24} className="text-brand-600" />
           Invoice Templates
         </h2>
-        <button onClick={onClose} className="text-slate-500 hover:text-slate-700 dark:hover:text-slate-300">
+        <button onClick={onClose} className="text-content-secondary hover:text-content-primary">
           Close
         </button>
       </div>
@@ -62,7 +62,7 @@ export const TemplateSelector: React.FC<Props> = ({
         {categories.map(category => (
           <button
             key={category.id}
-            className="px-3 py-1.5 text-sm rounded-md bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
+            className="px-3 py-1.5 text-sm rounded-[10px] bg-surface-2 text-content-secondary hover:text-content-primary transition-colors"
           >
             {category.name}
           </button>
@@ -78,12 +78,12 @@ export const TemplateSelector: React.FC<Props> = ({
             <div
               key={template.id}
               onClick={() => !isLocked && onSelectTemplate(template.id)}
-              className={`relative rounded-xl border-2 overflow-hidden transition-all ${
+              className={`relative rounded-[12px] border-2 overflow-hidden transition-all ${
                 isSelected
-                  ? 'border-indigo-500 ring-2 ring-indigo-200 dark:ring-indigo-800'
+                  ? 'border-brand-500 ring-2 ring-brand-100'
                   : isLocked
-                  ? 'border-slate-200 dark:border-slate-700 opacity-60'
-                  : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 cursor-pointer'
+                  ? 'border-line opacity-60'
+                  : 'border-line hover:border-line-strong cursor-pointer'
               }`}
             >
               <div
@@ -100,22 +100,22 @@ export const TemplateSelector: React.FC<Props> = ({
                   </div>
                 )}
                 {isSelected && (
-                  <div className="absolute top-3 right-3 bg-indigo-600 rounded-full p-1">
+                  <div className="absolute top-3 right-3 bg-brand-600 text-on-brand rounded-full p-1">
                     <Check size={16} />
                   </div>
                 )}
                 <span className="text-xl tracking-wide">TEMPLATE</span>
               </div>
 
-              <div className="p-4 bg-white dark:bg-slate-800">
-                <h3 className="font-semibold text-slate-900 dark:text-white">{template.name}</h3>
-                <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{template.description}</p>
+              <div className="p-4 bg-surface-1">
+                <h3 className="font-semibold text-content-primary">{template.name}</h3>
+                <p className="text-sm text-content-muted mt-1">{template.description}</p>
                 <div className="flex items-center justify-between mt-3">
-                  <span className="text-xs text-slate-500 capitalize px-2 py-0.5 bg-slate-100 dark:bg-slate-700 rounded-full">
+                  <span className="text-xs text-content-secondary capitalize px-2 py-0.5 bg-surface-2 rounded-full">
                     {template.category}
                   </span>
                   <button
-                    className="p-1.5 rounded-md text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+                    className="p-1.5 rounded-[10px] text-content-secondary hover:bg-surface-2 hover:text-brand-600 transition-colors"
                     title="Preview Template"
                   >
                     <Eye size={16} />

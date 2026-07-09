@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { FileText, Download, Eye, Edit2, Moon, Sun, Share2, Printer, MessageCircle, Mail, History, Trash2, Copy, Send, Users, Terminal, X } from 'lucide-react';
-import html2canvas from 'html2canvas';
-import { jsPDF } from 'jspdf';
+import { FileText, Download, Eye, Edit2, Moon, Sun, Share2, Printer, MessageCircle, Mail, History, Trash2, Copy, Send, Users, Terminal, X, Loader2, Menu } from 'lucide-react';
+import { Sidebar } from './components/layout/Sidebar';
 import { ClientRecord, InvoiceData, InvoiceRecord, ProductRecord, RecurringInvoiceTemplate, InvoiceStatus } from './types';
 import type { SubscriptionPlan, PaymentTransaction, UserSubscription, PlanType, SubscriptionStatus } from './types';
 import { InvoiceEditor } from './components/InvoiceEditor';
@@ -19,7 +18,21 @@ import TeamManagement from './components/TeamManagement';
 import ApiManagement from './components/ApiManagement';
 import AccountManager from './components/AccountManager';
 import { AuthModal } from './components/AuthModal';
-import { LandingPage } from './components/landing/LandingPage';
+import { useAuth } from './features/auth/useAuth';
+import { useClients } from './features/clients/useClients';
+import { useProducts } from './features/products/useProducts';
+import { useInvoiceHistory } from './features/invoices/useInvoiceHistory';
+import { fetchSubscription, upsertSubscription, recordTransaction } from './features/billing/subscriptionSync';
+import { startRazorpayCheckout } from './features/billing/razorpay';
+import { useLocalStorage, useLocalStorageString } from './lib/storage';
+import { getSuggestedInvoiceNumber, reserveNextInvoiceNumber } from './features/invoices/invoiceNumber';
+import { validateInvoice as runInvoiceValidation } from './features/invoices/validation';
+import { generatePdfBlob } from './features/invoices/pdf';
+import {
+  STORAGE_KEY, PLAN_KEY, USAGE_KEY,
+  RECURRING_KEY, STATUSES_KEY, THEME_KEY, FREE_LIMITS, createInitialInvoice,
+} from './config/constants';
+import type { PlanTier } from './config/constants';
 import {
   PaymentService,
   SUBSCRIPTION_PLANS,
@@ -31,71 +44,33 @@ import {
   activateEarlyBirdTrial,
 } from './utils/paymentGateway';
 
-const STORAGE_KEY = 'gst_invoice_seller_details';
-const HISTORY_KEY = 'gst_invoice_history';
-const CLIENTS_KEY = 'gst_invoice_clients';
-const PRODUCTS_KEY = 'gst_invoice_products';
-const INVOICE_SEQUENCE_KEY = 'gst_invoice_sequence_by_fy';
-const PLAN_KEY = 'gst_invoice_plan';
-const USAGE_KEY = 'gst_invoice_usage';
-
-type PlanTier = 'free' | 'basic' | 'premium' | 'enterprise' | 'pro';
-
-const FREE_LIMITS = {
-  monthlyDownloads: 25,
-  maxClients: 25,
-  maxProducts: 100,
-  maxHistory: 20,
-};
-
-const initialData: InvoiceData = {
-  seller: {
-    name: '',
-    address: '',
-    email: '',
-    phone: '',
-    gstin: '',
-  },
-  buyer: {
-    name: '',
-    address: '',
-    state: '',
-    gstin: '',
-  },
-  meta: {
-    invoiceNumber: '',
-    invoiceDate: new Date().toISOString().split('T')[0],
-    dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-  },
-  items: [
-    {
-      id: crypto.randomUUID(),
-      description: 'Web Development Services',
-      hsnSac: '998311',
-      quantity: 1,
-      rate: 15000,
-      gstPercentage: 18,
-    },
-  ],
-  isInterState: false,
-};
+// Shared toolbar button styles. Feature toggles all share one neutral look
+// with a single brand-tinted active state, instead of each button carrying
+// its own colour — keeps the toolbar calm and consistent.
+const TOOLBAR_BTN =
+  'flex-shrink-0 flex items-center gap-2 px-3 sm:px-4 py-2 text-sm font-medium rounded-[10px] transition-colors';
+const TOOLBAR_BTN_IDLE =
+  'bg-surface-1 text-content-secondary border border-line hover:bg-surface-2 hover:text-content-primary';
+const TOOLBAR_BTN_ACTIVE =
+  'bg-brand-50 text-brand-700 ring-1 ring-brand-500 border border-transparent';
 
 export default function App() {
-  const [data, setData] = useState<InvoiceData>(initialData);
+  const [data, setData] = useState<InvoiceData>(createInitialInvoice);
   const [isPreview, setIsPreview] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isShareMenuOpen, setIsShareMenuOpen] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
-  const [invoiceHistory, setInvoiceHistory] = useState<InvoiceRecord[]>([]);
-  const [clients, setClients] = useState<ClientRecord[]>([]);
-  const [products, setProducts] = useState<ProductRecord[]>([]);
+  const { isLoggedIn, user, signOut } = useAuth();
+  const userId = user?.id ?? null;
+  const [invoiceHistory, setInvoiceHistory] = useInvoiceHistory(userId);
+  const [clients, setClients] = useClients(userId);
+  const [products, setProducts] = useProducts(userId);
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
-  const [planTier, setPlanTier] = useState<PlanTier>('free');
+  const [planTier, setPlanTier] = useLocalStorage<PlanTier>(PLAN_KEY, 'free');
   const [isTeamOpen, setIsTeamOpen] = useState(false);
   const [isApiOpen, setIsApiOpen] = useState(false);
   const [isManagerOpen, setIsManagerOpen] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(() => {
-    return localStorage.getItem('gstify_session') === 'true';
-  });
   const [usage, setUsage] = useState(() => {
     const month = new Date().toISOString().slice(0, 7);
     const saved = localStorage.getItem(USAGE_KEY);
@@ -161,9 +136,6 @@ export default function App() {
     saveSubscription(subscription);
     setUserSubscription(subscription);
     setPlanTier(tier);
-    setIsLoggedIn(true);
-    localStorage.setItem('gstify_session', 'true');
-    localStorage.setItem(PLAN_KEY, tier);
     setShowLandingPage(false);
   };
 
@@ -184,82 +156,32 @@ export default function App() {
     }
   };
 
-  const handleAuthSuccess = (name: string, email: string) => {
+  const handleAuthSuccess = (mode: 'signup' | 'login') => {
     setIsAuthOpen(false);
+    if (mode === 'login') {
+      // Returning user: resume their existing plan instead of granting a new trial.
+      const sub = loadSubscription();
+      if (sub) setPlanTier(sub.planType as PlanTier);
+      setShowLandingPage(false);
+      return;
+    }
     const targetTier = selectedPlanOnLanding || 'pro'; // Default to pro trial
     activatePlanFree(targetTier);
-    alert(`🎉 Welcome ${name}!\n\nYour 30-Day Free Trial for the ${targetTier.toUpperCase()} Plan is now active!`);
+    alert(`🎉 Welcome!\n\nYour 30-Day Free Trial for the ${targetTier.toUpperCase()} Plan is now active!`);
   };
 
-  const getFinancialYear = (dateString: string) => {
-    const date = new Date(dateString || Date.now());
-    const year = date.getFullYear();
-    const startYear = date.getMonth() >= 3 ? year : year - 1;
-    const endShort = String(startYear + 1).slice(-2);
-    return `${startYear}-${endShort}`;
-  };
-
-  const formatInvoiceNumber = (fy: string, seq: number) => `INV/${fy}/${String(seq).padStart(4, '0')}`;
-
-  const getSuggestedInvoiceNumber = (dateString: string) => {
-    const fy = getFinancialYear(dateString);
-    const raw = localStorage.getItem(INVOICE_SEQUENCE_KEY);
-    const parsed: Record<string, number> = raw ? JSON.parse(raw) : {};
-    const nextSeq = (parsed[fy] || 0) + 1;
-    return formatInvoiceNumber(fy, nextSeq);
-  };
-
-  const reserveNextInvoiceNumber = (dateString: string) => {
-    const fy = getFinancialYear(dateString);
-    const raw = localStorage.getItem(INVOICE_SEQUENCE_KEY);
-    const parsed: Record<string, number> = raw ? JSON.parse(raw) : {};
-    const nextSeq = (parsed[fy] || 0) + 1;
-    parsed[fy] = nextSeq;
-    localStorage.setItem(INVOICE_SEQUENCE_KEY, JSON.stringify(parsed));
-    return formatInvoiceNumber(fy, nextSeq);
-  };
-
+  // Runs pure validation and syncs the resulting errors into local state.
   const validateInvoice = (invoiceData: InvoiceData) => {
-    const errors: Record<string, string> = {};
-    const gstRegex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/;
-
-    if (!invoiceData.seller.name.trim()) errors.sellerName = 'Seller business name is required';
-    if (invoiceData.seller.gstin && !gstRegex.test(invoiceData.seller.gstin.toUpperCase())) {
-      errors.sellerGstin = 'Seller GSTIN format is invalid';
-    }
-    if (!invoiceData.buyer.name.trim()) errors.buyerName = 'Buyer name is required';
-    if (invoiceData.buyer.gstin && !gstRegex.test(invoiceData.buyer.gstin.toUpperCase())) {
-      errors.buyerGstin = 'Buyer GSTIN format is invalid';
-    }
-    if (!invoiceData.meta.invoiceDate) errors.invoiceDate = 'Invoice date is required';
-    if (!invoiceData.meta.dueDate) errors.dueDate = 'Due date is required';
-    if (invoiceData.meta.invoiceDate && invoiceData.meta.dueDate && invoiceData.meta.dueDate < invoiceData.meta.invoiceDate) {
-      errors.dueDate = 'Due date cannot be before invoice date';
-    }
-    if (!invoiceData.meta.invoiceNumber.trim()) errors.invoiceNumber = 'Invoice number is required';
-
-    if (invoiceData.items.length === 0) {
-      errors.items = 'At least one line item is required';
-    } else {
-      invoiceData.items.forEach((item, index) => {
-        if (!item.description.trim()) errors[`item_${index}_description`] = `Item ${index + 1}: description is required`;
-        if (item.quantity <= 0) errors[`item_${index}_quantity`] = `Item ${index + 1}: quantity must be greater than 0`;
-        if (item.rate < 0) errors[`item_${index}_rate`] = `Item ${index + 1}: rate cannot be negative`;
-      });
-    }
-
-    setValidationErrors(errors);
-    return {
-      valid: Object.keys(errors).length === 0,
-      errors,
-    };
+    const result = runInvoiceValidation(invoiceData);
+    setValidationErrors(result.errors);
+    return result;
   };
 
   const [selectedTemplate, setSelectedTemplate] = useState('default');
   const [isRecurringOpen, setIsRecurringOpen] = useState(false);
-  const [recurringTemplates, setRecurringTemplates] = useState<RecurringInvoiceTemplate[]>([]);
+  const [recurringTemplates, setRecurringTemplates] = useLocalStorage<RecurringInvoiceTemplate[]>(RECURRING_KEY, []);
   const [isStatusOpen, setIsStatusOpen] = useState(false);
-  const [invoiceStatuses, setInvoiceStatuses] = useState<InvoiceStatus[]>([]);
+  const [invoiceStatuses, setInvoiceStatuses] = useLocalStorage<InvoiceStatus[]>(STATUSES_KEY, []);
   const [isTemplateSelectorOpen, setIsTemplateSelectorOpen] = useState(false);
 
   const [activeFeature, setActiveFeature] = useState<string | null>(null);
@@ -661,6 +583,22 @@ export default function App() {
   const [showPricingPage, setShowPricingPage] = useState(false);
   const [userSubscription, setUserSubscription] = useState<UserSubscription | null>(() => loadSubscription());
 
+  // On login, pull the user's subscription from Supabase so a paid plan
+  // follows them across devices (localStorage is only a same-device cache).
+  useEffect(() => {
+    if (!userId) return;
+    let cancelled = false;
+    fetchSubscription(userId).then((sub) => {
+      if (cancelled || !sub) return;
+      setUserSubscription(sub);
+      if (isSubscriptionActive(sub) && sub.planType !== 'free') {
+        setPlanTier(sub.planType as PlanTier);
+      }
+    });
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId]);
+
   // Payment flow state
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [selectedPaymentPlan, setSelectedPaymentPlan] = useState<SubscriptionPlan | null>(null);
@@ -676,7 +614,7 @@ export default function App() {
 
   const [isDarkMode, setIsDarkMode] = useState(() => {
     if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('theme');
+      const saved = localStorage.getItem(THEME_KEY);
       if (saved) return saved === 'dark';
       return window.matchMedia('(prefers-color-scheme: dark)').matches;
     }
@@ -724,10 +662,10 @@ export default function App() {
   useEffect(() => {
     if (isDarkMode) {
       document.documentElement.classList.add('dark');
-      localStorage.setItem('theme', 'dark');
+      localStorage.setItem(THEME_KEY, 'dark');
     } else {
       document.documentElement.classList.remove('dark');
-      localStorage.setItem('theme', 'light');
+      localStorage.setItem(THEME_KEY, 'light');
     }
   }, [isDarkMode]);
 
@@ -745,70 +683,8 @@ export default function App() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Load invoice history from local storage
-  useEffect(() => {
-    const saved = localStorage.getItem(HISTORY_KEY);
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        setInvoiceHistory(parsed);
-      } catch (e) {
-        console.error('Failed to parse invoice history');
-      }
-    }
-  }, []);
-
-  // Load saved clients
-  useEffect(() => {
-    const saved = localStorage.getItem(CLIENTS_KEY);
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        setClients(Array.isArray(parsed) ? parsed : []);
-      } catch {
-        console.error('Failed to parse clients');
-      }
-    }
-  }, []);
-
-  // Load saved products
-  useEffect(() => {
-    const saved = localStorage.getItem(PRODUCTS_KEY);
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        setProducts(Array.isArray(parsed) ? parsed : []);
-      } catch {
-        console.error('Failed to parse products');
-      }
-    }
-  }, []);
-
-  // Load recurring templates
-  useEffect(() => {
-    const saved = localStorage.getItem('gst_invoice_recurring');
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        setRecurringTemplates(Array.isArray(parsed) ? parsed : []);
-      } catch {
-        console.error('Failed to parse recurring templates');
-      }
-    }
-  }, []);
-
-  // Load invoice statuses
-  useEffect(() => {
-    const saved = localStorage.getItem('gst_invoice_statuses');
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        setInvoiceStatuses(Array.isArray(parsed) ? parsed : []);
-      } catch {
-        console.error('Failed to parse invoice statuses');
-      }
-    }
-  }, []);
+  // invoiceHistory, clients, products, recurringTemplates and invoiceStatuses are
+  // all loaded from localStorage automatically by useLocalStorage above.
 
   // Check for due recurring invoices on load
   useEffect(() => {
@@ -846,7 +722,6 @@ export default function App() {
     };
     const updated = [record, ...invoiceHistory].slice(0, historyLimit);
     setInvoiceHistory(updated);
-    localStorage.setItem(HISTORY_KEY, JSON.stringify(updated));
   };
 
   // Function to load invoice from history
@@ -859,12 +734,7 @@ export default function App() {
   const deleteFromHistory = (id: string) => {
     const updated = invoiceHistory.filter(record => record.id !== id);
     setInvoiceHistory(updated);
-    localStorage.setItem(HISTORY_KEY, JSON.stringify(updated));
   };
-
-  useEffect(() => {
-    localStorage.setItem(PLAN_KEY, planTier);
-  }, [planTier]);
 
   useEffect(() => {
     localStorage.setItem(USAGE_KEY, JSON.stringify(usage));
@@ -885,17 +755,25 @@ export default function App() {
     setPaymentProcessing(true);
     setPaymentError(null);
 
-    // Bypass Razorpay entirely: instantly activate plan free for 30 days
-    setTimeout(() => {
-      const mockTransactionId = `PAY-FREE-${Date.now().toString(36).toUpperCase()}`;
-      handlePaymentComplete(
-        mockTransactionId,
-        `ORD-FREE-${Date.now().toString(36).toUpperCase()}`,
-        'free_trial_signature',
-        userDetails
-      );
-      setPaymentProcessing(false);
-    }, 1000);
+    // Real Razorpay flow: server creates the order, opens Checkout, and the
+    // signature is verified server-side before we treat the payment as done.
+    const amount = Math.round(selectedPaymentPlan.price * 1.18 * 100); // price + 18% GST, in paise
+    startRazorpayCheckout({
+      keyId: (import.meta as any).env?.VITE_RAZORPAY_KEY_ID || '',
+      amount,
+      currency: selectedPaymentPlan.currency,
+      planId: selectedPaymentPlan.id,
+      planName: selectedPaymentPlan.name,
+      user: userDetails,
+      onSuccess: (paymentId, orderId, signature) => {
+        setPaymentProcessing(false);
+        handlePaymentComplete(paymentId, orderId, signature, userDetails);
+      },
+      onError: (message) => {
+        setPaymentProcessing(false);
+        setPaymentError(message);
+      },
+    });
   };
 
   // Shared payment completion handler (used by both real Razorpay and demo checkout)
@@ -907,6 +785,8 @@ export default function App() {
   ) => {
     if (!selectedPaymentPlan) return;
 
+    const amountPaid = Math.round(selectedPaymentPlan.price * 1.18 * 100); // price + 18% GST, in paise
+
     const transaction: PaymentTransaction = {
       id: paymentId,
       orderId,
@@ -914,7 +794,7 @@ export default function App() {
       gatewayPaymentId: paymentId,
       gatewaySignature: signature,
       planId: selectedPaymentPlan.id,
-      amount: 0,
+      amount: amountPaid,
       currency: selectedPaymentPlan.currency,
       status: 'success',
       email: userDetails.email,
@@ -924,13 +804,20 @@ export default function App() {
     };
 
     const now = new Date();
-    const endDate = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000); // 30 days trial
+    const endDate = new Date(now);
+    if (selectedPaymentPlan.interval === 'yearly') {
+      endDate.setFullYear(endDate.getFullYear() + 1);
+    } else if (selectedPaymentPlan.interval === 'quarterly') {
+      endDate.setMonth(endDate.getMonth() + 3);
+    } else {
+      endDate.setMonth(endDate.getMonth() + 1);
+    }
 
     const subscription: UserSubscription = {
-      id: `SUB-TRIAL-${Date.now().toString(36).toUpperCase()}`,
+      id: `SUB-${Date.now().toString(36).toUpperCase()}`,
       planId: selectedPaymentPlan.id,
       planType: selectedPaymentPlan.type,
-      status: 'trial',
+      status: 'active',
       startDate: now.toISOString(),
       endDate: endDate.toISOString(),
       paymentTransactionId: paymentId,
@@ -946,8 +833,21 @@ export default function App() {
     };
 
     saveSubscription(subscription);
-    
-    // Save transaction mock to local storage
+
+    // Persist the subscription and transaction to Supabase so the paid
+    // plan and payment history survive across devices. Fire-and-forget:
+    // localStorage above already unlocks the plan immediately.
+    if (userId) {
+      upsertSubscription(userId, subscription).catch((e) => console.error('subscription sync failed', e));
+      recordTransaction(userId, {
+        orderId,
+        paymentId,
+        amount: amountPaid,
+        currency: selectedPaymentPlan.currency,
+      }).catch((e) => console.error('transaction record failed', e));
+    }
+
+    // Save transaction to local storage (same-device history cache)
     try {
       const saved = localStorage.getItem('gst_invoice_transactions');
       const transactions = saved ? JSON.parse(saved) : [];
@@ -961,9 +861,6 @@ export default function App() {
     const planType = selectedPaymentPlan.type;
     setUserSubscription(subscription);
     setPlanTier(planType);
-    setIsLoggedIn(true);
-    localStorage.setItem('gstify_session', 'true');
-    localStorage.setItem(PLAN_KEY, planType);
     setLastTransactionId(paymentId);
 
     // Close modals and show success
@@ -1013,7 +910,6 @@ export default function App() {
     );
     const updated = [record, ...deduped].slice(0, 200);
     setClients(updated);
-    localStorage.setItem(CLIENTS_KEY, JSON.stringify(updated));
   };
 
   const loadClientIntoBuyer = (clientId: string) => {
@@ -1054,7 +950,6 @@ export default function App() {
     );
     const updated = [product, ...deduped].slice(0, 500);
     setProducts(updated);
-    localStorage.setItem(PRODUCTS_KEY, JSON.stringify(updated));
   };
 
   const applyProductToItem = (productId: string, itemId: string) => {
@@ -1091,13 +986,11 @@ export default function App() {
       updated = [template, ...recurringTemplates];
     }
     setRecurringTemplates(updated);
-    localStorage.setItem('gst_invoice_recurring', JSON.stringify(updated));
   };
 
   const deleteRecurringTemplate = (id: string) => {
     const updated = recurringTemplates.filter(t => t.id !== id);
     setRecurringTemplates(updated);
-    localStorage.setItem('gst_invoice_recurring', JSON.stringify(updated));
   };
 
   const generateFromRecurring = (template: RecurringInvoiceTemplate) => {
@@ -1159,7 +1052,6 @@ export default function App() {
       ];
     }
     setInvoiceStatuses(updated);
-    localStorage.setItem('gst_invoice_statuses', JSON.stringify(updated));
   };
 
   const sendPaymentReminder = (invoiceId: string, method: 'whatsapp' | 'email') => {
@@ -1183,114 +1075,14 @@ export default function App() {
     alert(`Reminder opened in ${method}. Please send the message in the new window.`);
   };
 
-  const generatePdfBlob = async (element: HTMLElement): Promise<{ blob: Blob, fileName: string }> => {
-    try {
-      // Create a clone to avoid modifying original
-      const clonedElement = element.cloneNode(true) as HTMLElement;
-      
-      // Add temporary styles to handle color parsing issues
-      const styleSheet = document.createElement('style');
-      styleSheet.textContent = `
-        * {
-          color-space: srgb !important;
-          -webkit-print-color-adjust: exact !important;
-          print-color-adjust: exact !important;
-        }
-        html, body {
-          background: white !important;
-          color: #000 !important;
-        }
-        img {
-          max-width: 100% !important;
-          height: auto !important;
-          display: block !important;
-        }
-      `;
-      clonedElement.appendChild(styleSheet);
-      
-      // Recursively fix computed styles to avoid oklch which html2canvas doesn't support well
-      const fixStyles = (el: Element) => {
-        const style = window.getComputedStyle(el);
-        const element = el as HTMLElement;
-        
-        const propertiesToFix: Array<{ css: string, inline: keyof CSSStyleDeclaration }> = [
-          { css: 'color', inline: 'color' },
-          { css: 'background-color', inline: 'backgroundColor' },
-          { css: 'border-color', inline: 'borderColor' },
-          { css: 'fill', inline: 'fill' },
-          { css: 'stroke', inline: 'stroke' },
-        ];
-
-        propertiesToFix.forEach(({ css, inline }) => {
-          const value = style.getPropertyValue(css);
-          if (value && (value.includes('oklch') || value.includes('var('))) {
-            // Replace with computed hex/rgb if possible, or fallback
-            // html2canvas works better with explicit colors
-            if (inline === 'color') element.style.color = value.includes('oklch') ? '#000000' : value;
-            else if (inline === 'backgroundColor') element.style.backgroundColor = value.includes('oklch') ? '#ffffff' : value;
-            else if (inline === 'borderColor') element.style.borderColor = value.includes('oklch') ? '#dddddd' : value;
-          }
-        });
-        
-        for (let i = 0; i < el.children.length; i++) {
-          fixStyles(el.children[i]);
-        }
-      };
-      
-      // Temporarily add to DOM for rendering (hidden but layout-able)
-      clonedElement.style.position = 'fixed';
-      clonedElement.style.left = '-9999px';
-      clonedElement.style.top = '0';
-      clonedElement.style.width = '210mm'; // Standard A4 width
-      clonedElement.style.visibility = 'visible'; // Must be visible for html2canvas
-      document.body.appendChild(clonedElement);
-      
-      // Run fixStyles after appending so getComputedStyle works correctly
-      fixStyles(clonedElement);
-      
-      try {
-        const canvas = await html2canvas(clonedElement, { 
-          scale: 2, 
-          useCORS: true,
-          logging: false,
-          allowTaint: true,
-          backgroundColor: '#ffffff',
-          width: clonedElement.offsetWidth,
-          height: clonedElement.offsetHeight,
-          windowWidth: clonedElement.offsetWidth,
-        });
-        
-        document.body.removeChild(clonedElement);
-        
-        const imgData = canvas.toDataURL('image/jpeg', 0.95);
-        const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
-        
-        const pdfWidth = pdf.internal.pageSize.getWidth();
-        const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-        
-        pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
-        const fileName = `${data.meta.invoiceNumber || 'Invoice'}.pdf`;
-        
-        return { 
-          blob: pdf.output('blob'),
-          fileName 
-        };
-      } catch (canvasError) {
-        if (clonedElement.parentNode) document.body.removeChild(clonedElement);
-        throw canvasError;
-      }
-    } catch (error) {
-      console.error('Error generating PDF:', error);
-      throw error;
-    }
-  };
-
   const handleDownload = async () => {
+    if (isDownloading) return;
     try {
       if (!isPremium && usage.downloads >= FREE_LIMITS.monthlyDownloads) {
         alert(`Free plan monthly download limit (${FREE_LIMITS.monthlyDownloads}) reached. Upgrade to Premium for unlimited downloads.`);
         return;
       }
+      setIsDownloading(true);
 
       // Validation
       const validation = validateInvoice(data);
@@ -1314,7 +1106,7 @@ export default function App() {
         return;
       }
       
-      const { blob, fileName } = await generatePdfBlob(element);
+      const { blob, fileName } = await generatePdfBlob(element, data.meta.invoiceNumber);
       
       // Save file
       const url = URL.createObjectURL(blob);
@@ -1335,13 +1127,14 @@ export default function App() {
       };
       const nextHistory = [record, ...invoiceHistory].slice(0, historyLimit);
       setInvoiceHistory(nextHistory);
-      localStorage.setItem(HISTORY_KEY, JSON.stringify(nextHistory));
 
       setUsage(prev => ({ ...prev, downloads: prev.downloads + 1 }));
       
     } catch (error) {
       console.error('\u274C Download error:', error);
       alert(`\u274C Error downloading PDF: ${(error as Error).message}`);
+    } finally {
+      setIsDownloading(false);
     }
   };
 
@@ -1366,7 +1159,7 @@ export default function App() {
 
     try {
       if (method === 'native' && navigator.share) {
-        const { blob, fileName } = await generatePdfBlob(element);
+        const { blob, fileName } = await generatePdfBlob(element, data.meta.invoiceNumber);
         const file = new File([blob], fileName, { type: 'application/pdf' });
         
         // Use canShare if available, otherwise just try sharing
@@ -1409,267 +1202,642 @@ export default function App() {
     }
   };
 
+  const viewTitle = isPreview
+    ? 'Invoice preview'
+    : activeFeature === 'recurring' ? 'Recurring invoices'
+    : activeFeature === 'status' ? 'Payment status'
+    : activeFeature === 'template' ? 'Templates'
+    : activeFeature === 'team' ? 'Team'
+    : activeFeature === 'api' ? 'API keys'
+    : activeFeature === 'history' ? 'Invoice history'
+    : 'Create invoice';
+
   return (
     <>
     <div className="min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 font-sans transition-colors duration-200 flex flex-col">
 
       {showLandingPage ? (
-        <LandingPage
-          isDarkMode={isDarkMode}
-          setIsDarkMode={setIsDarkMode}
-          isLoggedIn={isLoggedIn}
-          setIsLoggedIn={setIsLoggedIn}
-          setPlanTier={setPlanTier}
-          setShowLandingPage={setShowLandingPage}
-          handleGetStarted={handleGetStarted}
-          handleSelectPlanLanding={handleSelectPlanLanding}
-          isYearlyPricing={isYearlyPricing}
-          setIsYearlyPricing={setIsYearlyPricing}
-          invoiceTemplates={invoiceTemplates}
-          loadSubscription={loadSubscription}
-          isSubscriptionActive={isSubscriptionActive}
-        />
-      ) : (
-        <>
-          {/* Top Navigation Bar - Hidden when printing */}
-          <nav className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-b border-slate-200 dark:border-slate-700 sticky top-0 z-50 print:hidden transition-colors duration-200 shadow-sm">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 min-h-[4rem] py-2 flex items-center justify-between flex-wrap gap-y-3">
-              <div className="flex items-center gap-4">
-                <button 
-                  onClick={() => setShowLandingPage(true)}
-                  className="flex items-center gap-1 text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-amber-500 transition-colors text-sm font-medium"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
-                  Home
-                </button>
-                <div 
-                  className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity"
-                  onClick={() => setShowLandingPage(true)}
-                  title="Back to Landing Page"
-                >
-                <svg viewBox="0 0 200 50" height="32" className="drop-shadow-sm">
-                  <defs>
-                    <linearGradient id="goldGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                      <stop offset="0%" stopColor="#d4af37" stopOpacity="1" />
-                      <stop offset="50%" stopColor="#f3e5ab" stopOpacity="1" />
-                      <stop offset="100%" stopColor="#c5a028" stopOpacity="1" />
-                    </linearGradient>
-                    <linearGradient id="blueGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                      <stop offset="0%" stopColor="#0f172a" stopOpacity="1" />
-                      <stop offset="100%" stopColor="#334155" stopOpacity="1" />
-                    </linearGradient>
-                  </defs>
-                  <g transform="translate(0, 2) scale(0.45)">
-                    <path d="M20,0 L70,0 L90,20 L90,90 Q90,100 80,100 L20,100 Q10,100 10,90 L10,10 Q10,0 20,0 Z" className="fill-slate-200 dark:fill-slate-700" />
-                    <path d="M70,0 L70,20 L90,20" className="fill-slate-300 dark:fill-slate-600" opacity="0.5"/>
-                    <path d="M50,35 C35,35 25,45 25,55 C25,75 50,90 50,90 C50,90 75,75 75,55 C75,45 65,35 50,35 Z" fill="url(#goldGradient)" />
-                    <text x="50" y="68" fontFamily="Arial, sans-serif" fontWeight="bold" fontSize="32" fill="white" textAnchor="middle">{'\u20B9'}</text>
-                    <circle cx="85" cy="15" r="12" fill="#10b981" stroke="white" strokeWidth="2"/>
-                    <path d="M79,15 L83,19 L91,11" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
-                  </g>
-                  <text x="55" y="32" fontFamily="'Playfair Display', serif" fontWeight="700" fontSize="26" className="fill-slate-900 dark:fill-white" letterSpacing="-0.5">
-                    GSTify
-                  </text>
-                  <text x="56" y="43" fontFamily="'Outfit', sans-serif" fontWeight="500" fontSize="8" className="fill-slate-500 dark:fill-slate-400" letterSpacing="1.2">
-                    INVOICE GENERATOR
-                  </text>
+        <main className="flex-1 bg-slate-50 dark:bg-slate-950 transition-colors duration-300 font-[Outfit]">
+          
+          {/* Navigation Bar */}
+          <nav className="sticky top-0 w-full z-50 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-b border-slate-200 dark:border-slate-800 shadow-sm">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+              <div 
+                className="flex items-center gap-3 font-[Playfair_Display] font-bold text-xl cursor-pointer"
+                onClick={() => setShowLandingPage(true)}
+              >
+                <svg width="30" height="30" viewBox="0 0 100 100">
+                  <path d="M20,10 L60,10 L80,30 L80,80 Q80,90 70,90 L20,90 Q10,90 10,80 L10,20 Q10,10 20,10 Z" className="fill-slate-900 dark:fill-white"/>
+                  <path d="M45,40 C35,40 25,50 25,60 C25,75 45,85 45,85 C45,85 65,75 65,60 C65,50 55,40 45,40 Z" className="fill-brand-500"/>
                 </svg>
+                GSTify
+              </div>
+              
+              {/* Desktop Menu */}
+              <div className="hidden md:flex items-center gap-8 text-sm font-medium">
+                <a href="#features" className="text-slate-600 dark:text-slate-400 hover:text-brand-600 transition-colors duration-200">Features</a>
+                <a href="#pricing" className="text-slate-600 dark:text-slate-400 hover:text-brand-600 transition-colors duration-200">Pricing</a>
+                {isLoggedIn ? (
+                  <button
+                    onClick={() => {
+                      signOut();
+                      setPlanTier('free');
+                    }}
+                    className="text-red-500 hover:text-red-600 transition-colors duration-200"
+                  >
+                    Logout
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => setIsAuthOpen(true)}
+                    className="text-brand-600 hover:text-brand-700 transition-colors duration-200"
+                  >
+                    Login
+                  </button>
+                )}
+              </div>
+
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setIsDarkMode(!isDarkMode)}
+                  className="w-9 h-9 rounded-full border border-slate-200 dark:border-slate-700 flex items-center justify-center hover:bg-slate-100 dark:hover:bg-slate-800 transition-all duration-200 hover:scale-105"
+                >
+                  {isDarkMode ? 
+                    <Sun size={18} className="text-amber-400" /> : 
+                    <Moon size={18} className="text-slate-600" />
+                  }
+                </button>
+                <button
+                  onClick={handleGetStarted}
+                  className="hidden sm:block px-5 py-2.5 rounded-full font-semibold bg-brand-600 hover:bg-brand-700 text-on-brand hover:-translate-y-0.5 transition-all duration-200 shadow-md hover:shadow-lg"
+                >
+                  Get Started
+                </button>
+                
+                {/* Mobile Menu Button */}
+                <button 
+                  onClick={() => setShowLandingPage(false)}
+                  className="md:hidden w-9 h-9 rounded-full bg-brand-600 text-on-brand flex items-center justify-center shadow-md"
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M3 12h18M3 6h18M3 18h18"/>
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </nav>
+
+          {/* Hero Section */}
+          <section className="pt-32 pb-24 px-6 bg-gradient-to-br from-sky-50 to-white dark:from-slate-950 dark:to-slate-900 relative overflow-hidden">
+            <div className="absolute -top-24 -right-24 w-[500px] h-[500px] bg-brand-500/10 rounded-full blur-3xl"></div>
+            
+            <div className="max-w-7xl mx-auto flex flex-col lg:flex-row items-center gap-16">
+              <div className="flex-1 z-10">
+                <div className="inline-flex items-center px-4 py-2 rounded-full bg-brand-50 border border-brand-100 text-brand-700 font-semibold text-sm mb-6 animate-pulse">
+                  \u1F680 Launching Limited-Time Free Tier for Solo Creators
+                </div>
+                
+                <h1 className="text-[clamp(2.5rem,5vw,3.5rem)] font-[Playfair_Display] font-bold leading-tight mb-6">
+                  Effortless Invoicing for <span className="text-brand-600 italic">Modern India</span>
+                </h1>
+                
+                <p className="text-lg text-slate-600 dark:text-slate-400 leading-relaxed mb-8 max-w-xl">
+                  Create professional GST-compliant invoices in seconds. Track payments, manage clients, and grow your business with the most premium billing tool.
+                </p>
+                
+                <div className="flex flex-wrap gap-4">
+                  <button
+                    onClick={handleGetStarted}
+                    className="px-7 py-3.5 rounded-full font-semibold bg-brand-600 hover:bg-brand-700 text-on-brand hover:-translate-y-1 transition-all shadow-xl hover:shadow-2xl"
+                  >
+                    Create Invoice Free
+                  </button>
+                  <button
+                    onClick={() => setShowLandingPage(false)}
+                    className="px-7 py-3.5 rounded-full font-semibold border-2 border-slate-200 dark:border-slate-700 hover:border-slate-900 dark:hover:border-white transition-colors"
+                  >
+                    View Live Demo
+                  </button>
+                </div>
+              </div>
+              
+              <div className="flex-1 max-w-xl w-full z-10 perspective-[1000px]">
+                <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 p-1 transform rotate-y-[-10deg] rotate-x-[5deg] hover:rotate-y-0 hover:rotate-x-0 transition-transform duration-500 animate-[float_6s_ease-in-out_infinite]">
+                  <InvoiceTemplatePremium 
+                    data={{
+                      seller: {
+                        name: 'Tech Solutions Pvt Ltd',
+                        address: '123 Business Park, Mumbai',
+                        email: 'support@techsolutions.in',
+                        phone: '9876543210',
+                        gstin: '27ABCDE1234F1Z5'
+                      },
+                      buyer: {
+                        name: 'Acme Corporation',
+                        address: '456 Commercial Street, Bangalore',
+                        state: 'Karnataka',
+                        gstin: '29XYZAB5678C2Z1'
+                      },
+                      meta: {
+                        invoiceNumber: 'INV/2025-26/0001',
+                        invoiceDate: '2025-11-04',
+                        dueDate: '2025-11-11'
+                      },
+                      items: [
+                        {
+                          id: '1',
+                          description: 'Website Development Services',
+                          hsnSac: '998311',
+                          quantity: 1,
+                          rate: 15000,
+                          gstPercentage: 18
+                        }
+                      ],
+                      isInterState: false
+                    }} 
+                    template={invoiceTemplates[0]}
+                  />
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* Features Section */}
+          <section id="features" className="py-24 px-6 bg-white dark:bg-slate-950">
+            <div className="max-w-3xl mx-auto text-center mb-16">
+              <h2 className="text-3xl font-bold mb-4 font-[Playfair_Display]">Why Choose GSTify?</h2>
+              <p className="text-slate-500 dark:text-slate-400">Designed for freelancers, small businesses, and agencies who demand precision and style.</p>
+            </div>
+            
+            <div className="max-w-6xl mx-auto grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {/* Feature 1 */}
+              <div className="group bg-slate-50 dark:bg-slate-900 rounded-2xl p-6 border border-slate-200 dark:border-slate-800 hover:border-brand-500/50 transition-all duration-300 hover:-translate-y-2 hover:shadow-xl cursor-pointer">
+                <div className="w-14 h-14 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center mb-5 group-hover:bg-brand-50 transition-colors">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="group-hover:text-brand-600 transition-colors">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                    <polyline points="14 2 14 8 20 8"></polyline>
+                    <line x1="16" y1="13" x2="8" y2="13"></line>
+                    <line x1="16" y1="17" x2="8" y2="17"></line>
+                    <polyline points="10 9 9 9 8 9"></polyline>
+                  </svg>
+                </div>
+                <h3 className="text-lg font-semibold mb-2">GST Compliant</h3>
+                <p className="text-sm text-slate-500 dark:text-slate-400">Automatically calculate CGST, SGST, and IGST based on latest tax slabs and place of supply rules.</p>
+              </div>
+
+              {/* Feature 2 */}
+              <div className="group bg-slate-50 dark:bg-slate-900 rounded-2xl p-6 border border-slate-200 dark:border-slate-800 hover:border-brand-500/50 transition-all duration-300 hover:-translate-y-2 hover:shadow-xl cursor-pointer">
+                <div className="w-14 h-14 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center mb-5 group-hover:bg-brand-50 transition-colors">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="group-hover:text-brand-600 transition-colors">
+                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                  </svg>
+                </div>
+                <h3 className="text-lg font-semibold mb-2">Bank-Grade Security</h3>
+                <p className="text-sm text-slate-500 dark:text-slate-400">All data stays 100% offline in your browser. No server calls. Complete privacy guaranteed.</p>
+              </div>
+
+              {/* Feature 3 */}
+              <div className="group bg-slate-50 dark:bg-slate-900 rounded-2xl p-6 border border-slate-200 dark:border-slate-800 hover:border-brand-500/50 transition-all duration-300 hover:-translate-y-2 hover:shadow-xl cursor-pointer">
+                <div className="w-14 h-14 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center mb-5 group-hover:bg-brand-50 transition-colors">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="group-hover:text-brand-600 transition-colors">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="7 10 12 15 17 10"></polyline>
+                    <line x1="12" y1="15" x2="12" y2="3"></line>
+                  </svg>
+                </div>
+                <h3 className="text-lg font-semibold mb-2">One-Click Export</h3>
+                <p className="text-sm text-slate-500 dark:text-slate-400">Professional PDF generation in single click. Share directly to WhatsApp, Email or Gmail.</p>
+              </div>
+
+              {/* Feature 4 */}
+              <div className="group bg-slate-50 dark:bg-slate-900 rounded-2xl p-6 border border-slate-200 dark:border-slate-800 hover:border-brand-500/50 transition-all duration-300 hover:-translate-y-2 hover:shadow-xl cursor-pointer">
+                <div className="w-14 h-14 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center mb-5 group-hover:bg-brand-50 transition-colors">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="group-hover:text-brand-600 transition-colors">
+                    <rect width="7" height="7" x="3" y="3" rx="1"/>
+                    <rect width="7" height="7" x="14" y="3" rx="1"/>
+                    <rect width="7" height="7" x="14" y="14" rx="1"/>
+                    <rect width="7" height="7" x="3" y="14" rx="1"/>
+                  </svg>
+                </div>
+                <h3 className="text-lg font-semibold mb-2">30 Premium Templates</h3>
+                <p className="text-sm text-slate-500 dark:text-slate-400">Beautiful professional invoice templates. Impress your clients with premium designs.</p>
+              </div>
+            </div>
+          </section>
+
+          {/* Testimonials Section */}
+          <section id="testimonials" className="py-24 px-6 bg-slate-50 dark:bg-slate-900 relative overflow-hidden">
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-brand-500/5 rounded-full blur-3xl"></div>
+            
+            <div className="max-w-3xl mx-auto text-center mb-16 relative z-10">
+              <h2 className="text-3xl font-bold mb-4 font-[Playfair_Display]">Loved by <span className="text-brand-600">10,000+</span> Businesses</h2>
+              <p className="text-slate-500 dark:text-slate-400">Dekhiye Indian business owners kya kehte hain GSTify ke baare mein. Humare customers ki satisfaction hi hamari pehchan hai.</p>
+            </div>
+            
+            <div className="max-w-6xl mx-auto grid md:grid-cols-2 lg:grid-cols-3 gap-6 relative z-10">
+              {/* Testimonial 1 */}
+              <div className="group bg-white dark:bg-slate-800 rounded-2xl p-8 border border-slate-200 dark:border-slate-700 hover:border-brand-500/50 transition-all duration-300 hover:-translate-y-2 hover:shadow-xl relative">
+                <div className="absolute top-5 right-6 text-6xl font-serif text-brand-500/10">â€</div>
+                <div className="text-amber-500 mb-5 text-lg">â˜…â˜…â˜…â˜…â˜…</div>
+                <p className="text-slate-700 dark:text-slate-300 leading-relaxed mb-8 italic">"Pehle GST invoice banana ek bada headache tha. GSTify ke aane ke baad meri accounting mein 70% waqt bach gaya hai. Interface bahut smooth hai."</p>
+                <div className="flex items-center gap-4">
+                  <img src="https://ui-avatars.com/api/?name=Rajesh+Kumar&background=2e1065&color=c4b5fd" alt="Rajesh Kumar" className="w-12 h-12 rounded-full border-2 border-brand-500" />
+                  <div>
+                    <div className="font-semibold">Rajesh Kumar</div>
+                    <div className="text-sm text-slate-500 dark:text-slate-400">Owner, Kumar Electronics</div>
+                  </div>
                 </div>
               </div>
 
-              <div className="flex items-center gap-1.5 sm:gap-2.5 ml-auto px-2 sm:px-4 flex-wrap">
-                <button
-                  onClick={() => setIsDarkMode(!isDarkMode)}
-                  className="flex-shrink-0 p-2 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-all duration-200 hover:scale-105"
-                  aria-label="Toggle Dark Mode"
-                >
-                  {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
-                </button>
+              {/* Testimonial 2 */}
+              <div className="group bg-white dark:bg-slate-800 rounded-2xl p-8 border border-slate-200 dark:border-slate-700 hover:border-brand-500/50 transition-all duration-300 hover:-translate-y-2 hover:shadow-xl relative">
+                <div className="absolute top-5 right-6 text-6xl font-serif text-brand-500/10">â€</div>
+                <div className="text-amber-500 mb-5 text-lg">â˜…â˜…â˜…â˜…â˜…</div>
+                <p className="text-slate-700 dark:text-slate-300 leading-relaxed mb-8 italic">"Main ek freelance graphic designer hoon. Mujhe professional invoices chahiye hote the client ke liye. GSTify ne meri image bahut improve ki hai."</p>
+                <div className="flex items-center gap-4">
+                  <img src="https://ui-avatars.com/api/?name=Priya+Sharma&background=2e1065&color=c4b5fd" alt="Priya Sharma" className="w-12 h-12 rounded-full border-2 border-brand-500" />
+                  <div>
+                    <div className="font-semibold">Priya Sharma</div>
+                    <div className="text-sm text-slate-500 dark:text-slate-400">Freelance Designer</div>
+                  </div>
+                </div>
+              </div>
 
+              {/* Testimonial 3 */}
+              <div className="group bg-white dark:bg-slate-800 rounded-2xl p-8 border border-slate-200 dark:border-slate-700 hover:border-brand-500/50 transition-all duration-300 hover:-translate-y-2 hover:shadow-xl relative">
+                <div className="absolute top-5 right-6 text-6xl font-serif text-brand-500/10">â€</div>
+                <div className="text-amber-500 mb-5 text-lg">â˜…â˜…â˜…â˜…â˜…</div>
+                <p className="text-slate-700 dark:text-slate-300 leading-relaxed mb-8 italic">"Auto GST calculation feature mere liye best hai. Maine kai tools try kiye par GSTify ka simplicity aur accuracy unmatched hai. Highly recommended!"</p>
+                <div className="flex items-center gap-4">
+                  <img src="https://ui-avatars.com/api/?name=Amit+Verma&background=2e1065&color=c4b5fd" alt="Amit Verma" className="w-12 h-12 rounded-full border-2 border-brand-500" />
+                  <div>
+                    <div className="font-semibold">Amit Verma</div>
+                    <div className="text-sm text-slate-500 dark:text-slate-400">CA & Tax Consultant</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Testimonial 4 */}
+              <div className="group bg-white dark:bg-slate-800 rounded-2xl p-8 border border-slate-200 dark:border-slate-700 hover:border-brand-500/50 transition-all duration-300 hover:-translate-y-2 hover:shadow-xl relative">
+                <div className="absolute top-5 right-6 text-6xl font-serif text-brand-500/10">â€</div>
+                <div className="text-amber-500 mb-5 text-lg">â˜…â˜…â˜…â˜…â˜…</div>
+                <p className="text-slate-700 dark:text-slate-300 leading-relaxed mb-8 italic">"Dark mode support ek premium touch deta hai. Raat ko bhi kaam karna aasan hai. Support team bhi bahut helpful hai."</p>
+                <div className="flex items-center gap-4">
+                  <img src="https://ui-avatars.com/api/?name=Sneha+Patel&background=2e1065&color=c4b5fd" alt="Sneha Patel" className="w-12 h-12 rounded-full border-2 border-brand-500" />
+                  <div>
+                    <div className="font-semibold">Sneha Patel</div>
+                    <div className="text-sm text-slate-500 dark:text-slate-400">Boutique Owner</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Testimonial 5 */}
+              <div className="group bg-white dark:bg-slate-800 rounded-2xl p-8 border border-slate-200 dark:border-slate-700 hover:border-brand-500/50 transition-all duration-300 hover:-translate-y-2 hover:shadow-xl relative">
+                <div className="absolute top-5 right-6 text-6xl font-serif text-brand-500/10">â€</div>
+                <div className="text-amber-500 mb-5 text-lg">â˜…â˜…â˜…â˜…â˜†</div>
+                <p className="text-slate-700 dark:text-slate-300 leading-relaxed mb-8 italic">"Bahut acha tool hai. Sirf mobile app ka wait kar raha hoon. Web version par currently mera poora kaam chal raha hai."</p>
+                <div className="flex items-center gap-4">
+                  <img src="https://ui-avatars.com/api/?name=Vikram+Singh&background=2e1065&color=c4b5fd" alt="Vikram Singh" className="w-12 h-12 rounded-full border-2 border-brand-500" />
+                  <div>
+                    <div className="font-semibold">Vikram Singh</div>
+                    <div className="text-sm text-slate-500 dark:text-slate-400">Logistics Manager</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Testimonial 6 */}
+              <div className="group bg-white dark:bg-slate-800 rounded-2xl p-8 border border-slate-200 dark:border-slate-700 hover:border-brand-500/50 transition-all duration-300 hover:-translate-y-2 hover:shadow-xl relative">
+                <div className="absolute top-5 right-6 text-6xl font-serif text-brand-500/10">â€</div>
+                <div className="text-amber-500 mb-5 text-lg">â˜…â˜…â˜…â˜…â˜…</div>
+                <p className="text-slate-700 dark:text-slate-300 leading-relaxed mb-8 italic">"Export to PDF feature crystal clear quality deta hai. Mere clients hamesha mujhe compliment karte hain professional invoice ke liye."</p>
+                <div className="flex items-center gap-4">
+                  <img src="https://ui-avatars.com/api/?name=Anjali+Rao&background=2e1065&color=c4b5fd" alt="Anjali Rao" className="w-12 h-12 rounded-full border-2 border-brand-500" />
+                  <div>
+                    <div className="font-semibold">Anjali Rao</div>
+                    <div className="text-sm text-slate-500 dark:text-slate-400">Interior Designer</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* Pricing Section */}
+          <section id="pricing" className="py-24 px-6 bg-white dark:bg-slate-950 relative">
+            <div className="max-w-3xl mx-auto text-center mb-16">
+              <h2 className="text-3xl font-bold mb-4 font-[Playfair_Display]">Simple, Transparent Pricing</h2>
+              <p className="text-slate-500 dark:text-slate-400 mb-10">Koi chhupa hua charge nahi. Aap apne business ke hisaab sahi plan choose karein.</p>
+              
+              <div className="flex items-center justify-center gap-4 font-medium">
+                <span className={`transition-colors ${!isYearlyPricing ? 'text-slate-900 dark:text-white font-semibold' : 'text-slate-600 dark:text-slate-400'}`}>Monthly</span>
+                <button 
+                  onClick={() => setIsYearlyPricing(!isYearlyPricing)}
+                  className={`relative w-14 h-8 rounded-full transition-colors ${isYearlyPricing ? 'bg-brand-600' : 'bg-slate-200 dark:bg-slate-700'}`}
+                >
+                  <div className={`absolute top-1 w-6 h-6 rounded-full bg-white shadow-md transition-transform transform ${isYearlyPricing ? 'translate-x-6 left-1' : 'left-1'}`}></div>
+                </button>
+                <span className={`transition-colors ${isYearlyPricing ? 'text-slate-900 dark:text-white font-semibold' : 'text-slate-600 dark:text-slate-400'}`}>
+                  Yearly <span className="bg-brand-50 text-brand-700 px-2 py-0.5 rounded-full text-xs font-bold ml-1">Save 20%</span>
+                </span>
+              </div>
+            </div>
+            
+            <div className="max-w-5xl mx-auto grid md:grid-cols-3 gap-6 items-stretch pt-6">
+              {/* Starter Plan */}
+              <div className="bg-white dark:bg-slate-800 rounded-2xl p-8 border border-slate-200 dark:border-slate-700 shadow-lg flex flex-col">
+                <h3 className="text-xl font-semibold mb-3">Starter</h3>
+                <div className="text-4xl font-bold font-[Playfair_Display] mb-2">{'\u20B9'}0</div>
+                <div className="text-sm text-slate-500 dark:text-slate-400 mb-8">Forever Free</div>
+                
+                <ul className="space-y-4 mb-8 text-left">
+                  <li className="flex items-center gap-3">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="text-brand-600 flex-shrink-0"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                    <span>Up to 25 Invoices/month</span>
+                  </li>
+                  <li className="flex items-center gap-3">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="text-brand-600 flex-shrink-0"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                    <span>Basic GST Calculation</span>
+                  </li>
+                  <li className="flex items-center gap-3">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="text-brand-600 flex-shrink-0"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                    <span>Standard PDF Export</span>
+                  </li>
+                  <li className="flex items-center gap-3 text-slate-400 opacity-50">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="flex-shrink-0"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                    <span>No GST Reports</span>
+                  </li>
+                </ul>
+                
+                <button 
+                  onClick={() => {
+                    if (!isLoggedIn) setPlanTier('free');
+                    setShowLandingPage(false);
+                  }}
+                  className="w-full py-3 rounded-full border-2 border-slate-200 dark:border-slate-700 font-semibold hover:border-slate-900 dark:hover:border-white transition-colors"
+                >
+                  Get Started Free
+                </button>
+              </div>
+              
+              {/* Professional Plan - Free Trial */}
+              <div className="relative rounded-2xl overflow-hidden">
+                <div className="bg-gradient-to-b from-brand-50 to-white dark:from-slate-800 dark:to-slate-900 rounded-2xl p-8 border-2 border-brand-500 shadow-2xl ring-2 ring-brand-500 ring-offset-2 dark:ring-offset-slate-950 relative flex flex-col h-full justify-between">
+                  <div>
+                    <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-brand-600 text-on-brand px-4 py-1 rounded-full text-xs font-bold uppercase tracking-wider">
+                      Most Popular
+                    </div>
+                    <h3 className="text-xl font-semibold mb-3">Professional</h3>
+                    <div className="text-4xl font-bold font-[Playfair_Display] mb-2">₹0</div>
+                    <div className="text-sm text-slate-500 dark:text-slate-400 mb-8">30-Day Free Trial</div>
+                    
+                    <ul className="space-y-4 mb-8 text-left">
+                      <li className="flex items-center gap-3">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="text-brand-600 flex-shrink-0"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                        <span>Unlimited Invoices</span>
+                      </li>
+                      <li className="flex items-center gap-3">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="text-brand-600 flex-shrink-0"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                        <span>Advanced GST Reports (GSTR-1)</span>
+                      </li>
+                      <li className="flex items-center gap-3">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="text-brand-600 flex-shrink-0"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                        <span>Remove GSTify Branding</span>
+                      </li>
+                      <li className="flex items-center gap-3">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="text-brand-600 flex-shrink-0"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                        <span>Priority Email Support</span>
+                      </li>
+                    </ul>
+                  </div>
+                  
+                  <button 
+                    onClick={() => handleSelectPlanLanding('pro')}
+                    className="w-full py-3 rounded-full bg-brand-600 hover:bg-brand-700 text-on-brand font-bold transition-all shadow-lg hover:shadow-xl cursor-pointer"
+                  >
+                    Try Free for 30 Days
+                  </button>
+                </div>
+              </div>
+              
+              {/* Enterprise Plan - Free Trial */}
+              <div className="relative rounded-2xl overflow-hidden">
+                <div className="bg-white dark:bg-slate-800 rounded-2xl p-8 border border-slate-200 dark:border-slate-700 shadow-lg flex flex-col h-full justify-between">
+                  <div>
+                    <h3 className="text-xl font-semibold mb-3">Enterprise</h3>
+                    <div className="text-4xl font-bold font-[Playfair_Display] mb-2">₹0</div>
+                    <div className="text-sm text-slate-500 dark:text-slate-400 mb-8">30-Day Free Trial</div>
+                    
+                    <ul className="space-y-4 mb-8 text-left">
+                      <li className="flex items-center gap-3">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="text-brand-600 flex-shrink-0"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                        <span>Everything in Pro</span>
+                      </li>
+                      <li className="flex items-center gap-3">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="text-brand-600 flex-shrink-0"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                        <span>Multi-user Access (5 Users)</span>
+                      </li>
+                      <li className="flex items-center gap-3">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="text-brand-600 flex-shrink-0"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                        <span>API Access</span>
+                      </li>
+                      <li className="flex items-center gap-3">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="text-brand-600 flex-shrink-0"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                        <span>Dedicated Account Manager</span>
+                      </li>
+                    </ul>
+                  </div>
+                  
+                  <button 
+                    onClick={() => handleSelectPlanLanding('enterprise')}
+                    className="w-full py-3 rounded-full border-2 border-slate-200 dark:border-slate-700 font-semibold hover:border-slate-900 dark:hover:border-white transition-colors cursor-pointer"
+                  >
+                    Try Free for 30 Days
+                  </button>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* Contact Section */}
+          <section id="contact" className="py-24 px-6 bg-slate-50 dark:bg-slate-900">
+            <div className="max-w-6xl mx-auto">
+              <div className="text-center mb-16">
+                <h2 className="text-3xl font-bold mb-4 font-[Playfair_Display]">Chalein baat shuru karte hain.</h2>
+                <p className="text-slate-500 dark:text-slate-400 max-w-2xl mx-auto">Koi sawaal hai? Humari team aapki madad ke liye taiyar hai. Niche diye gaye details se humse contact karein.</p>
+              </div>
+              
+              <div className="grid md:grid-cols-2 gap-12 items-start">
+                {/* Contact Info */}
+                <div className="space-y-6">
+                  {/* Address Card */}
+                  <div className="bg-white dark:bg-slate-800 rounded-xl p-6 border border-slate-200 dark:border-slate-700 flex items-start gap-4">
+                    <div className="w-12 h-12 rounded-lg bg-slate-50 dark:bg-slate-900 flex items-center justify-center text-brand-600 flex-shrink-0">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                        <circle cx="12" cy="10" r="3"></circle>
+                      </svg>
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-lg mb-1">Our Location</h3>
+                      <p className="text-slate-500 dark:text-slate-400">Online Workspace<br/>Operating entirely from India</p>
+                    </div>
+                  </div>
+
+                  {/* Email Card */}
+                  <div className="bg-white dark:bg-slate-800 rounded-xl p-6 border border-slate-200 dark:border-slate-700 flex items-start gap-4">
+                    <div className="w-12 h-12 rounded-lg bg-slate-50 dark:bg-slate-900 flex items-center justify-center text-brand-600 flex-shrink-0">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+                        <polyline points="22,6 12,13 2,6"></polyline>
+                      </svg>
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-lg mb-1">Email Us</h3>
+                      <p className="text-slate-500 dark:text-slate-400">support@gstify.com<br/>sales@gstify.com</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Contact Form */}
+                <div className="bg-white dark:bg-slate-800 rounded-2xl p-8 border border-slate-200 dark:border-slate-700 shadow-xl">
+                  <form onSubmit={(e) => { e.preventDefault(); alert('Message sent successfully! Thank you for contacting us.'); }}>
+                    <div className="grid gap-6">
+                      <div>
+                        <label className="block text-sm font-medium mb-2">Full Name</label>
+                        <input 
+                          type="text" 
+                          className="w-full px-4 py-3 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all" 
+                          placeholder="Aapka naam" 
+                          required
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium mb-2">Email Address</label>
+                        <input 
+                          type="email" 
+                          className="w-full px-4 py-3 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all" 
+                          placeholder="name@company.com" 
+                          required
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium mb-2">Subject</label>
+                        <select className="w-full px-4 py-3 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all">
+                          <option value="general">General Inquiry</option>
+                          <option value="support">Technical Support</option>
+                          <option value="sales">Sales Question</option>
+                          <option value="feedback">Feedback</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium mb-2">Message</label>
+                        <textarea 
+                          rows={5}
+                          className="w-full px-4 py-3 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all resize-none" 
+                          placeholder="Apna message yahan likhein..." 
+                          required
+                        />
+                      </div>
+
+                      <button 
+                        type="submit" 
+                        className="w-full py-4 bg-brand-600 hover:bg-brand-700 text-on-brand font-semibold rounded-lg hover:-translate-y-0.5 transition-all shadow-lg hover:shadow-xl"
+                      >
+                        Send Message
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* Footer */}
+          <footer className="py-10 px-6 bg-white dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800">
+            <div className="max-w-6xl mx-auto text-center">
+              <div className="flex items-center justify-center gap-3 font-[Playfair_Display] font-bold text-xl mb-4">
+                <svg width="30" height="30" viewBox="0 0 100 100">
+                  <path d="M20,10 L60,10 L80,30 L80,80 Q80,90 70,90 L20,90 Q10,90 10,80 L10,20 Q10,10 20,10 Z" className="fill-slate-900 dark:fill-white"/>
+                  <path d="M45,40 C35,40 25,50 25,60 C25,75 45,85 45,85 C45,85 65,75 65,60 C65,50 55,40 45,40 Z" className="fill-brand-500"/>
+                </svg>
+                GSTify
+              </div>
+              <p className="text-slate-500 dark:text-slate-400 text-sm">{'\u00A9'} 2025 GSTify Inc. All rights reserved. Made with {'\u2764\uFE0F'} in India.</p>
+            </div>
+          </footer>
+        </main>
+      ) : (
+        <div className="flex min-h-screen bg-surface-0">
+          <Sidebar
+            activeFeature={activeFeature}
+            onSelectEditor={closeAllFeatures}
+            onToggleFeature={toggleFeature}
+            isEnterprise={planTier === 'enterprise'}
+            isPremium={isPremium}
+            planLabel={userSubscription?.planType === 'enterprise' ? 'Enterprise' : 'Pro'}
+            daysRemaining={userSubscription ? getSubscriptionDaysRemaining(userSubscription) : null}
+            usageDownloads={usage.downloads}
+            freeLimit={FREE_LIMITS.monthlyDownloads}
+            onUpgrade={() => handlePlanSelect(SUBSCRIPTION_PLANS.find(p => p.type === 'pro')!)}
+            isDarkMode={isDarkMode}
+            onToggleDark={() => setIsDarkMode(!isDarkMode)}
+            onHome={() => setShowLandingPage(true)}
+            recurringDue={recurringTemplates.some(t => t.isActive && t.nextDueDate <= new Date().toISOString().split('T')[0])}
+            historyCount={invoiceHistory.length}
+            mobileOpen={sidebarOpen}
+            onCloseMobile={() => setSidebarOpen(false)}
+          />
+          <div className="flex-1 flex flex-col min-w-0">
+          {/* Slim contextual topbar */}
+          <header className="bg-surface-1/95 backdrop-blur-xl border-b border-line sticky top-0 z-40 print:hidden">
+            <div className="h-16 px-4 sm:px-6 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2 min-w-0">
+                <button
+                  onClick={() => setSidebarOpen(true)}
+                  className="md:hidden p-2 -ml-1 rounded-[10px] text-content-secondary hover:bg-surface-2"
+                  aria-label="Open menu"
+                >
+                  <Menu size={20} />
+                </button>
+                <h1 className="text-base sm:text-lg font-semibold text-content-primary truncate">{viewTitle}</h1>
+              </div>
+
+              <div className="flex items-center gap-2">
                 {isPreview ? (
                   <button
                     onClick={() => setIsPreview(false)}
-                    className="flex-shrink-0 flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 text-sm font-medium text-white bg-indigo-600 dark:bg-indigo-500 rounded-lg hover:bg-indigo-700 dark:hover:bg-indigo-600 transition-all duration-200 hover:scale-105 print:hidden shadow-sm"
+                    className={`${TOOLBAR_BTN} ${TOOLBAR_BTN_IDLE} print:hidden`}
                   >
-                    <Edit2 size={16} /> 
+                    <Edit2 size={16} />
                     <span className="hidden sm:inline">Back to Edit</span>
                   </button>
                 ) : (
                   <button
                     onClick={() => setIsPreview(true)}
-                    className="flex-shrink-0 flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 text-sm font-medium text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-all duration-200 hover:scale-105 shadow-sm"
+                    className={`${TOOLBAR_BTN} ${TOOLBAR_BTN_IDLE}`}
                   >
-                    <Eye size={16} /> 
+                    <Eye size={16} />
                     <span className="hidden sm:inline">Preview</span>
                   </button>
                 )}
-                
+
                 <button
                   onClick={handlePrint}
-                  className="hidden sm:flex flex-shrink-0 items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 text-sm font-medium text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-all duration-200 hover:scale-105 print:hidden shadow-sm"
+                  className={`hidden sm:flex ${TOOLBAR_BTN} ${TOOLBAR_BTN_IDLE} print:hidden`}
                 >
                   <Printer size={16} /> 
                   <span>Print</span>
                 </button>
 
-                <button
-                  onClick={() => toggleFeature('recurring')}
-                  className={`flex-shrink-0 flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 text-sm font-medium rounded-lg transition-all duration-200 hover:scale-105 shadow-sm ${
-                    activeFeature === 'recurring'
-                      ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/60 dark:text-indigo-300 ring-2 ring-indigo-500'
-                      : 'text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-900/40 border border-indigo-200 dark:border-indigo-800 hover:bg-indigo-100'
-                  }`}
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                  <span className="hidden lg:inline">Recurring</span>
-                  {recurringTemplates.some(t => t.isActive && t.nextDueDate <= new Date().toISOString().split('T')[0]) && (
-                    <span className="flex h-2 w-2 relative -ml-1 -mt-2">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
-                    </span>
-                  )}
-                </button>
-
-                <button
-                  onClick={() => toggleFeature('status')}
-                  className={`flex-shrink-0 flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 text-sm font-medium rounded-lg transition-all duration-200 hover:scale-105 shadow-sm ${
-                    activeFeature === 'status'
-                      ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/60 dark:text-amber-300 ring-2 ring-amber-500'
-                      : 'text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/40 border border-amber-200 dark:border-amber-800 hover:bg-amber-100'
-                  }`}
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                  <span className="hidden lg:inline">Status</span>
-                </button>
-
-                <button
-                  onClick={() => toggleFeature('template')}
-                  className={`flex-shrink-0 flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 text-sm font-medium rounded-lg transition-all duration-200 hover:scale-105 shadow-sm ${
-                    activeFeature === 'template'
-                      ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/60 dark:text-purple-300 ring-2 ring-purple-500'
-                      : 'text-purple-700 dark:text-purple-300 bg-purple-50 dark:bg-purple-900/40 border border-purple-200 dark:border-purple-800 hover:bg-purple-100'
-                  }`}
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>
-                  <span className="hidden lg:inline">Template</span>
-                </button>
-
-                {planTier === 'enterprise' && (
-                  <>
-                    <button
-                      onClick={() => toggleFeature('team')}
-                      className={`flex-shrink-0 flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 text-sm font-medium rounded-lg transition-all duration-200 hover:scale-105 shadow-sm ${
-                        activeFeature === 'team'
-                          ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/60 dark:text-emerald-300 ring-2 ring-emerald-500'
-                          : 'text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-900/40 border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100'
-                      }`}
-                    >
-                      <Users size={16} />
-                      <span className="hidden lg:inline">Team</span>
-                    </button>
-                    <button
-                      onClick={() => toggleFeature('api')}
-                      className={`flex-shrink-0 flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 text-sm font-medium rounded-lg transition-all duration-200 hover:scale-105 shadow-sm ${
-                        activeFeature === 'api'
-                          ? 'bg-slate-100 text-slate-700 dark:bg-slate-900/60 dark:text-slate-300 ring-2 ring-slate-500'
-                          : 'text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-100'
-                      }`}
-                    >
-                      <Terminal size={16} />
-                      <span className="hidden md:inline">API</span>
-                    </button>
-                  </>
-                )}
-
-                <div className="relative" ref={historyRef}>
-                  <button
-                    onClick={() => toggleFeature('history')}
-                    className={`flex-shrink-0 flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md transition-colors relative ${
-                      activeFeature === 'history'
-                        ? 'bg-slate-100 text-slate-700 dark:bg-slate-900/60 dark:text-slate-300 ring-2 ring-slate-500 animate-pulse'
-                        : 'text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 hover:bg-slate-50'
-                    }`}
-                  >
-                    <History size={16} /> <span className="hidden sm:inline">History</span>
-                    {invoiceHistory.length > 0 && (
-                      <span className="absolute -top-1 -right-1 bg-indigo-600 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                        {invoiceHistory.length}
-                      </span>
-                    )}
-                  </button>
-                  {activeFeature === 'history' && (
-                    <div className="absolute right-0 mt-2 w-80 bg-white dark:bg-slate-800 rounded-md shadow-lg border border-slate-200 dark:border-slate-700 z-50 max-h-96 overflow-y-auto">
-                      {invoiceHistory.length === 0 ? (
-                        <div className="p-4 text-center text-slate-500 dark:text-slate-400 text-sm">
-                          No invoice history yet. Download an invoice to save it to history.
-                        </div>
-                      ) : (
-                        <div className="py-1">
-                          {invoiceHistory.map((record) => (
-                            <div key={record.id} className="flex items-center justify-between px-4 py-2 hover:bg-slate-50 dark:hover:bg-slate-700 border-b border-slate-100 dark:border-slate-700 last:border-b-0">
-                              <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium text-slate-900 dark:text-slate-100 truncate">
-                                  {record.data.meta.invoiceNumber}
-                                </p>
-                                <p className="text-xs text-slate-500 dark:text-slate-400">
-                                  {new Date(record.createdAt).toLocaleDateString()}
-                                </p>
-                              </div>
-                              <div className="flex items-center gap-1 ml-2">
-                                <button
-                                  onClick={() => loadFromHistory(record)}
-                                  className="p-1 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-slate-600 rounded transition-colors"
-                                  title="Load this invoice"
-                                >
-                                  <Copy size={14} />
-                                </button>
-                                <button
-                                  onClick={() => deleteFromHistory(record.id)}
-                                  className="p-1 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-slate-600 rounded transition-colors"
-                                  title="Delete this invoice"
-                                >
-                                  <Trash2 size={14} />
-                                </button>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-
-                <div className="hidden md:flex flex-shrink-0 items-center gap-2 px-3 py-1.5 rounded-md border border-slate-300 dark:border-slate-600 text-xs">
-                  {isPremium ? (
-                    <span className="font-semibold uppercase tracking-wide text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
-                      {'\u2728'} {userSubscription?.planType === 'enterprise' ? 'Enterprise' : 'PRO'}
-                      {userSubscription && (
-                        <span className="text-slate-400 dark:text-slate-500 font-normal normal-case ml-1">
-                          {getSubscriptionDaysRemaining(userSubscription)}d left
-                        </span>
-                      )}
-                    </span>
-                  ) : (
-                    <>
-                      <span className="font-semibold uppercase tracking-wide">FREE</span>
-                      <span className="text-slate-500 dark:text-slate-400">
-                        {usage.downloads}/{FREE_LIMITS.monthlyDownloads} downloads
-                      </span>
-                      <button
-                        onClick={() => handlePlanSelect(SUBSCRIPTION_PLANS.find(p => p.type === 'pro')!)}
-                        className="px-2 py-1 rounded bg-gradient-to-r from-indigo-500 to-blue-500 text-white font-semibold hover:from-indigo-600 hover:to-blue-600 transition-all"
-                      >
-                        {'\u26A1'} Upgrade
-                      </button>
-                    </>
-                  )}
-                </div>
-
-
                 <div className="relative" ref={shareMenuRef}>
                   <button
                     onClick={() => setIsShareMenuOpen(!isShareMenuOpen)}
-                    className="flex-shrink-0 flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 text-sm font-medium text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-all duration-200 hover:scale-105 print:hidden shadow-sm"
+                    aria-haspopup="menu"
+                    aria-expanded={isShareMenuOpen}
+                    className={`${TOOLBAR_BTN} ${TOOLBAR_BTN_IDLE} print:hidden`}
                   >
                     <Share2 size={16} /> <span className="hidden sm:inline">Share</span>
                   </button>
@@ -1693,16 +1861,18 @@ export default function App() {
 
                 <button
                   onClick={handleDownload}
-                  className="flex-shrink-0 flex items-center gap-1.5 sm:gap-2 px-4 sm:px-5 py-1.5 sm:py-2 text-sm font-semibold text-white bg-amber-600 hover:bg-amber-500 rounded-lg transition-all duration-200 hover:scale-105 print:hidden shadow-md"
+                  disabled={isDownloading}
+                  aria-busy={isDownloading}
+                  className="flex-shrink-0 flex items-center gap-2 px-4 sm:px-5 py-2 text-sm font-semibold text-white bg-amber-600 hover:bg-amber-500 rounded-[10px] transition-colors print:hidden shadow-sm disabled:opacity-70 disabled:cursor-not-allowed"
                 >
-                  <Download size={16} /> 
-                  <span className="hidden sm:inline">Download PDF</span>
+                  {isDownloading ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
+                  <span className="hidden sm:inline">{isDownloading ? 'Generating…' : 'Download PDF'}</span>
                 </button>
               </div>
             </div>
-          </nav>
+          </header>
 
-      <main className="p-4 sm:p-8">
+      <main className="flex-1 p-4 sm:p-8">
         {isPreview ? (
           <div id="invoice-capture-area" className="print:m-0 print:p-0">
             {isPremium ? (
@@ -1713,10 +1883,11 @@ export default function App() {
           </div>
         ) : (
           <div className="print:hidden">
-            <div className="max-w-5xl mx-auto mb-6">
-              <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Create Invoice</h1>
-              <p className="text-slate-500 dark:text-slate-400 mt-1">Fill in the details below. Seller details are automatically saved to your browser.</p>
-            </div>
+            {!isRecurringOpen && !isStatusOpen && !isTemplateSelectorOpen && !isTeamOpen && !isApiOpen && !isHistoryOpen && (
+              <div className="max-w-5xl mx-auto mb-6">
+                <p className="text-content-secondary">Fill in the details below. Seller details are saved to your browser automatically.</p>
+              </div>
+            )}
             {Object.keys(validationErrors).length > 0 && (
               <div className="max-w-5xl mx-auto mb-4 rounded-md border border-red-200 bg-red-50 text-red-700 px-4 py-3 text-sm">
                 <p className="font-semibold mb-1">Please fix these issues:</p>
@@ -1799,8 +1970,39 @@ export default function App() {
               </div>
             </div>
 
+            <div className={!isHistoryOpen ? 'hidden' : ''}>
+              <div className="mt-6 max-w-5xl mx-auto">
+                {invoiceHistory.length === 0 ? (
+                  <div className="rounded-[12px] border border-line bg-surface-1 p-10 text-center">
+                    <History size={28} className="mx-auto text-content-muted" />
+                    <p className="mt-3 text-content-primary font-medium">No invoices yet</p>
+                    <p className="text-sm text-content-muted mt-1">Download an invoice and it will be saved here.</p>
+                  </div>
+                ) : (
+                  <div className="rounded-[12px] border border-line bg-surface-1 divide-y divide-line overflow-hidden">
+                    {invoiceHistory.map((record) => (
+                      <div key={record.id} className="flex items-center justify-between px-4 py-3 hover:bg-surface-2 transition-colors">
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium text-content-primary truncate">{record.data.meta.invoiceNumber}</p>
+                          <p className="text-xs text-content-muted">{new Date(record.createdAt).toLocaleDateString()} · {record.data.buyer.name || 'No client'}</p>
+                        </div>
+                        <div className="flex items-center gap-1 ml-2">
+                          <button onClick={() => loadFromHistory(record)} className="p-2 rounded-[10px] text-brand-600 hover:bg-brand-50 transition-colors" title="Load this invoice" aria-label="Load invoice">
+                            <Copy size={16} />
+                          </button>
+                          <button onClick={() => deleteFromHistory(record.id)} className="p-2 rounded-[10px] text-red-600 hover:bg-red-50 dark:hover:bg-surface-2 transition-colors" title="Delete this invoice" aria-label="Delete invoice">
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
             {/* Main Editor View - Hidden when a major secondary view is open */}
-            <div className={isRecurringOpen || isStatusOpen || isTemplateSelectorOpen || isTeamOpen || isApiOpen ? 'hidden' : ''}>
+            <div className={isRecurringOpen || isStatusOpen || isTemplateSelectorOpen || isTeamOpen || isApiOpen || isHistoryOpen ? 'hidden' : ''}>
               <div className="max-w-5xl mx-auto space-y-8">
                 {planTier === 'enterprise' && (
                   <AccountManager />
@@ -1821,7 +2023,8 @@ export default function App() {
           </div>
         )}
       </main>
-         </>
+          </div>
+        </div>
       )}
 
       {/* ==================== PAYMENT MODALS ==================== */}

@@ -231,10 +231,10 @@ export const InvoiceEditor: React.FC<Props> = ({
     }
   };
 
-  const inputClasses = "w-full p-2 border border-slate-300 dark:border-slate-600 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 transition-colors";
-  const labelClasses = "block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1";
-  const cardClasses = "bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 transition-colors duration-200";
-  const headingClasses = "text-lg font-semibold text-slate-800 dark:text-slate-100 mb-4";
+  const inputClasses = "w-full p-2.5 border border-line rounded-[10px] focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none bg-surface-1 text-content-primary placeholder:text-content-muted transition-colors";
+  const labelClasses = "block text-sm font-medium text-content-secondary mb-1";
+  const cardClasses = "bg-surface-1 p-6 rounded-[12px] shadow-sm border border-line transition-colors";
+  const headingClasses = "text-lg font-semibold text-content-primary mb-4";
 
   return (
     <div className="space-y-8 max-w-5xl mx-auto pb-20">
@@ -244,7 +244,7 @@ export const InvoiceEditor: React.FC<Props> = ({
         <div className={cardClasses}>
           <h2 className={`${headingClasses} flex items-center justify-between`}>
             Seller Details
-            <label className="cursor-pointer text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 flex items-center gap-1">
+            <label className="cursor-pointer text-sm font-medium text-brand-600 hover:text-brand-700 flex items-center gap-1">
               <Upload size={16} />
               Upload Logo
               <input type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} />
@@ -252,7 +252,7 @@ export const InvoiceEditor: React.FC<Props> = ({
           </h2>
           <div className="space-y-4">
             {data.seller.logo && (
-              <div className="relative w-24 h-24 border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden bg-slate-50 dark:bg-slate-900">
+              <div className="relative w-24 h-24 border border-line rounded-lg overflow-hidden bg-surface-2">
                 <img src={data.seller.logo} alt="Logo" className="w-full h-full object-contain" />
                 <button 
                   onClick={() => onChange({ ...data, seller: { ...data.seller, logo: undefined } })}
@@ -285,17 +285,17 @@ export const InvoiceEditor: React.FC<Props> = ({
               <input type="text" name="gstin" value={data.seller.gstin} onChange={handleSellerChange} className={`${inputClasses} uppercase`} placeholder="22AAAAA0000A1Z5" />
             </div>
 
-            <div className="pt-4 border-t border-slate-200 dark:border-slate-700 mt-4">
+            <div className="pt-4 border-t border-line mt-4">
               <div className="flex items-center justify-between mb-4">
                 <label className={labelClasses}>Authorized Signature</label>
-                <label className="cursor-pointer text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 flex items-center gap-1">
+                <label className="cursor-pointer text-sm font-medium text-brand-600 hover:text-brand-700 flex items-center gap-1">
                   <Upload size={16} />
                   Upload Signature
                   <input type="file" accept="image/*" className="hidden" onChange={handleSignatureUpload} />
                 </label>
               </div>
               {data.seller.signature && (
-                <div className="relative w-40 h-20 border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden bg-slate-50 dark:bg-slate-900">
+                <div className="relative w-40 h-20 border border-line rounded-lg overflow-hidden bg-surface-2">
                   <img src={data.seller.signature} alt="Signature" className="w-full h-full object-contain" />
                   <button 
                     onClick={() => onChange({ ...data, seller: { ...data.seller, signature: undefined } })}
@@ -307,30 +307,29 @@ export const InvoiceEditor: React.FC<Props> = ({
               )}
             </div>
 
-            <div className="pt-4 border-t border-slate-200 dark:border-slate-700 mt-4">
-              <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-100 mb-3">Payment Method (Optional)</h3>
+            <div className="pt-4 border-t border-line mt-4">
+              <h3 className="text-sm font-semibold text-content-primary mb-3">Payment Method (Optional)</h3>
               <div className="flex gap-2 mb-4">
-                <button
-                  type="button"
-                  onClick={() => onChange({ ...data, seller: { ...data.seller, paymentMethod: 'none' } })}
-                  className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${data.seller.paymentMethod === 'none' || !data.seller.paymentMethod ? 'bg-slate-300 dark:bg-slate-600 text-slate-900 dark:text-white' : 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'}`}
-                >
-                  None
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onChange({ ...data, seller: { ...data.seller, paymentMethod: 'bank' } })}
-                  className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${data.seller.paymentMethod === 'bank' ? 'bg-blue-500 text-white' : 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'}`}
-                >
-                  Bank Transfer
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onChange({ ...data, seller: { ...data.seller, paymentMethod: 'upi' } })}
-                  className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${data.seller.paymentMethod === 'upi' ? 'bg-orange-500 text-white' : 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'}`}
-                >
-                  UPI
-                </button>
+                {(['none', 'bank', 'upi'] as const).map((method) => {
+                  const label = method === 'none' ? 'None' : method === 'bank' ? 'Bank Transfer' : 'UPI';
+                  const isActive = method === 'none'
+                    ? data.seller.paymentMethod === 'none' || !data.seller.paymentMethod
+                    : data.seller.paymentMethod === method;
+                  return (
+                    <button
+                      key={method}
+                      type="button"
+                      onClick={() => onChange({ ...data, seller: { ...data.seller, paymentMethod: method } })}
+                      className={`px-3 py-2 rounded-[10px] text-sm font-medium transition-colors ${
+                        isActive
+                          ? 'bg-brand-600 text-on-brand'
+                          : 'bg-surface-2 text-content-secondary hover:text-content-primary'
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
               </div>
 
               {data.seller.paymentMethod === 'bank' && (
@@ -340,35 +339,35 @@ export const InvoiceEditor: React.FC<Props> = ({
                     <button
                       type="button"
                       onClick={handleDropdownToggle}
-                      className={`${inputClasses} w-full text-left flex items-center justify-between bg-white dark:bg-slate-900`}
+                      className={`${inputClasses} w-full text-left flex items-center justify-between`}
                     >
-                      <span className={data.seller.bankName ? 'text-slate-900 dark:text-slate-100' : 'text-slate-500'}>
+                      <span className={data.seller.bankName ? 'text-content-primary' : 'text-content-muted'}>
                         {data.seller.bankName || 'Select a Bank'}
                       </span>
-                      <span className={`text-slate-400 transition-transform duration-200 ${isBankDropdownOpen ? 'rotate-180' : ''}`}>
+                      <span className={`text-content-muted transition-transform duration-200 ${isBankDropdownOpen ? 'rotate-180' : ''}`}>
                         ▼
                       </span>
                     </button>
 
                     {isBankDropdownOpen && (
-                      <div className={`absolute left-0 right-0 ${dropdownOpenDirection === 'down' ? 'top-full mt-1' : 'bottom-full mb-1'} bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-md shadow-lg z-50`}>
+                      <div className={`absolute left-0 right-0 ${dropdownOpenDirection === 'down' ? 'top-full mt-1' : 'bottom-full mb-1'} bg-surface-1 border border-line rounded-[10px] shadow-lg z-50`}>
                         {/* Search Input */}
-                        <div className="sticky top-0 p-3 border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
+                        <div className="sticky top-0 p-3 border-b border-line bg-surface-1">
                           <div className="relative flex items-center">
-                            <Search size={16} className="absolute left-3 text-slate-400" />
+                            <Search size={16} className="absolute left-3 text-content-muted" />
                             <input
                               ref={searchInputRef}
                               type="text"
                               placeholder="Search banks..."
                               value={bankSearchText}
                               onChange={(e) => setBankSearchText(e.target.value)}
-                              className="w-full pl-9 pr-8 py-2 border border-slate-300 dark:border-slate-600 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100"
+                              className="w-full pl-9 pr-8 py-2 border border-line rounded-[10px] focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none bg-surface-1 text-content-primary"
                             />
                             {bankSearchText && (
                               <button
                                 type="button"
                                 onClick={() => setBankSearchText('')}
-                                className="absolute right-3 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+                                className="absolute right-3 text-content-muted hover:text-content-primary"
                               >
                                 <X size={16} />
                               </button>
@@ -386,16 +385,16 @@ export const InvoiceEditor: React.FC<Props> = ({
                               setIsBankDropdownOpen(false);
                               setBankSearchText('');
                             }}
-                            className={`w-full text-left px-4 py-3 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 border-b border-slate-100 dark:border-slate-700 transition-colors ${
+                            className={`w-full text-left px-4 py-3 hover:bg-brand-50 border-b border-line transition-colors ${
                               !data.seller.bankName
-                                ? 'bg-indigo-100 dark:bg-indigo-900/50 font-semibold text-indigo-700 dark:text-indigo-300'
-                                : 'text-slate-700 dark:text-slate-300'
+                                ? 'bg-brand-50 font-semibold text-brand-700'
+                                : 'text-content-secondary'
                             }`}
                           >
                             <div className="flex items-center justify-between">
                               <span>Select a Bank</span>
                               {!data.seller.bankName && (
-                                <span className="text-indigo-600 dark:text-indigo-400 font-bold">✓</span>
+                                <span className="text-brand-600 font-bold">✓</span>
                               )}
                             </div>
                           </button>
@@ -406,22 +405,22 @@ export const InvoiceEditor: React.FC<Props> = ({
                                 key={bank}
                                 type="button"
                                 onClick={() => handleBankSelect(bank)}
-                                className={`w-full text-left px-4 py-3 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 border-b border-slate-100 dark:border-slate-700 last:border-b-0 transition-colors ${
+                                className={`w-full text-left px-4 py-3 hover:bg-brand-50 border-b border-line last:border-b-0 transition-colors ${
                                   data.seller.bankName === bank
-                                    ? 'bg-indigo-100 dark:bg-indigo-900/50 font-semibold text-indigo-700 dark:text-indigo-300'
-                                    : 'text-slate-700 dark:text-slate-300'
+                                    ? 'bg-brand-50 font-semibold text-brand-700'
+                                    : 'text-content-secondary'
                                 }`}
                               >
                                 <div className="flex items-center justify-between">
                                   <span>{bank}</span>
                                   {data.seller.bankName === bank && (
-                                    <span className="text-indigo-600 dark:text-indigo-400 font-bold">✓</span>
+                                    <span className="text-brand-600 font-bold">✓</span>
                                   )}
                                 </div>
                               </button>
                             ))
                           ) : (
-                            <div className="px-4 py-8 text-center text-slate-500 dark:text-slate-400">
+                            <div className="px-4 py-8 text-center text-content-muted">
                               <p>No banks found matching "{bankSearchText}"</p>
                             </div>
                           )}
@@ -458,7 +457,7 @@ export const InvoiceEditor: React.FC<Props> = ({
                         <button
                           type="button"
                           onClick={() => setShowAccountNumber(!showAccountNumber)}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-content-muted hover:text-content-primary"
                         >
                           {showAccountNumber ? (
                             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><line x1="2" x2="22" y1="2" y2="22"/></svg>
@@ -483,7 +482,7 @@ export const InvoiceEditor: React.FC<Props> = ({
                         <button
                           type="button"
                           onClick={() => setShowIfscCode(!showIfscCode)}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-content-muted hover:text-content-primary"
                         >
                           {showIfscCode ? (
                             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><line x1="2" x2="22" y1="2" y2="22"/></svg>
@@ -501,7 +500,7 @@ export const InvoiceEditor: React.FC<Props> = ({
                 <div>
                   <label className={labelClasses}>UPI ID</label>
                   <input type="text" name="upiId" value={data.seller.upiId || ''} onChange={handleSellerChange} className={inputClasses} placeholder="yourname@upi" />
-                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Format: name@bank (e.g., john@okhdfcbank, abc@upi)</p>
+                  <p className="text-xs text-content-muted mt-1">Format: name@bank (e.g., john@okhdfcbank, abc@upi)</p>
                 </div>
               )}
             </div>
@@ -519,7 +518,7 @@ export const InvoiceEditor: React.FC<Props> = ({
                   <button
                     type="button"
                     onClick={onAutoGenerateInvoiceNumber}
-                    className="px-3 py-2 whitespace-nowrap rounded-md text-sm font-medium bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300 hover:bg-indigo-200 dark:hover:bg-indigo-900/70 transition-colors"
+                    className="px-3 py-2 whitespace-nowrap rounded-[10px] text-sm font-medium bg-brand-50 text-brand-700 hover:bg-brand-100 transition-colors"
                   >
                     Auto
                   </button>
@@ -591,17 +590,17 @@ export const InvoiceEditor: React.FC<Props> = ({
       <div className={`${cardClasses} flex items-center justify-between`}>
         <div>
           <h2 className={headingClasses}>Tax Type</h2>
-          <p className="text-sm text-slate-500 dark:text-slate-400">Select how GST should be calculated based on the state.</p>
+          <p className="text-sm text-content-muted">Select how GST should be calculated based on the state.</p>
         </div>
-        <div className="flex items-center bg-slate-100 dark:bg-slate-900 p-1 rounded-lg">
+        <div className="flex items-center bg-surface-2 p-1 rounded-[10px]">
           <button
-            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${!data.isInterState ? 'bg-white dark:bg-slate-700 text-indigo-700 dark:text-indigo-300 shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'}`}
+            className={`px-4 py-2 rounded-[8px] text-sm font-medium transition-colors ${!data.isInterState ? 'bg-surface-1 text-brand-700 shadow-sm' : 'text-content-secondary hover:text-content-primary'}`}
             onClick={() => onChange({ ...data, isInterState: false })}
           >
             Same State (CGST + SGST)
           </button>
           <button
-            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${data.isInterState ? 'bg-white dark:bg-slate-700 text-indigo-700 dark:text-indigo-300 shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'}`}
+            className={`px-4 py-2 rounded-[8px] text-sm font-medium transition-colors ${data.isInterState ? 'bg-surface-1 text-brand-700 shadow-sm' : 'text-content-secondary hover:text-content-primary'}`}
             onClick={() => onChange({ ...data, isInterState: true })}
           >
             Different State (IGST)
@@ -614,7 +613,7 @@ export const InvoiceEditor: React.FC<Props> = ({
         <h2 className={headingClasses}>Items</h2>
         <table className="w-full min-w-[800px]">
           <thead>
-            <tr className="text-left text-sm font-medium text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-700">
+            <tr className="text-left text-sm font-medium text-content-secondary border-b border-line">
               <th className="pb-3 pr-4 w-1/3">Item Description</th>
               <th className="pb-3 px-4 w-32">HSN/SAC</th>
               <th className="pb-3 px-4 w-24">Qty</th>
@@ -624,14 +623,14 @@ export const InvoiceEditor: React.FC<Props> = ({
               <th className="pb-3 w-12"></th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100 dark:divide-slate-700/50">
+          <tbody className="divide-y divide-line">
             {data.items.map((item) => (
               <tr key={item.id}>
                 <td className="py-3 pr-4">
                   <input type="text" value={item.description} onChange={(e) => handleItemChange(item.id, 'description', e.target.value)} className={inputClasses} placeholder="Description" />
                   <div className="mt-2 flex gap-2">
                     <select
-                      className="w-full p-2 border border-slate-300 dark:border-slate-600 rounded-md text-xs bg-white dark:bg-slate-900"
+                      className="w-full p-2 border border-line rounded-[10px] text-xs bg-surface-1 text-content-primary"
                       defaultValue=""
                       onChange={(e) => {
                         if (e.target.value) onApplyProduct(e.target.value, item.id);
@@ -671,7 +670,7 @@ export const InvoiceEditor: React.FC<Props> = ({
                     <option value="28">28%</option>
                   </select>
                 </td>
-                <td className="py-3 pl-4 text-right font-medium text-slate-700 dark:text-slate-300">
+                <td className="py-3 pl-4 text-right font-medium text-content-primary">
                   {((item.quantity * item.rate) * (1 + item.gstPercentage / 100)).toFixed(2)}
                 </td>
                 <td className="py-3 pl-4 text-right">
@@ -683,7 +682,7 @@ export const InvoiceEditor: React.FC<Props> = ({
             ))}
           </tbody>
         </table>
-        <button onClick={addItem} className="mt-4 flex items-center gap-2 text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 bg-indigo-50 dark:bg-indigo-900/30 px-4 py-2 rounded-md transition-colors">
+        <button onClick={addItem} className="mt-4 flex items-center gap-2 text-sm font-medium text-brand-700 bg-brand-50 hover:bg-brand-100 px-4 py-2 rounded-[10px] transition-colors">
           <Plus size={16} /> Add New Item Row
         </button>
       </div>

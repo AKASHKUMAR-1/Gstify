@@ -44,8 +44,9 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
     }
   };
 
-  const gstAmount = 0;
-  const totalAmount = 0;
+  const gstAmount = plan.price * 0.18;
+  const totalAmount = plan.price + gstAmount;
+  const intervalLabel = plan.interval === 'yearly' ? 'year' : plan.interval === 'quarterly' ? 'quarter' : 'month';
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
@@ -75,7 +76,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
           </div>
 
           <h2 className="text-3xl font-bold text-white font-[Playfair_Display]">
-            Activate Free Trial
+            Complete Your Payment
           </h2>
         </div>
 
@@ -85,25 +86,25 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
             <div className="flex items-center justify-between mb-3">
               <div>
                 <h3 className="font-bold text-lg text-slate-900 dark:text-white">{plan.name} Plan</h3>
-                <p className="text-sm text-slate-500 dark:text-slate-400">30 Days Free Trial</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400">Billed per {intervalLabel}</p>
               </div>
               <div className="text-right">
-                <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">FREE</div>
-                <div className="text-xs text-slate-500 dark:text-slate-400">for 30 days</div>
+                <div className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">₹{totalAmount.toFixed(2)}</div>
+                <div className="text-xs text-slate-500 dark:text-slate-400">per {intervalLabel}</div>
               </div>
             </div>
             <div className="border-t border-slate-200 dark:border-slate-700 pt-3 space-y-1.5">
               <div className="flex justify-between text-sm">
                 <span className="text-slate-500 dark:text-slate-400">Plan Price</span>
-                <span className="text-slate-700 dark:text-slate-300 line-through">₹{plan.price.toFixed(2)}</span>
+                <span className="text-slate-700 dark:text-slate-300">₹{plan.price.toFixed(2)}</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-slate-500 dark:text-slate-400">Trial Discount</span>
-                <span className="text-emerald-600 dark:text-emerald-400">-₹{plan.price.toFixed(2)}</span>
+                <span className="text-slate-500 dark:text-slate-400">GST (18%)</span>
+                <span className="text-slate-700 dark:text-slate-300">₹{gstAmount.toFixed(2)}</span>
               </div>
               <div className="flex justify-between text-sm font-bold border-t border-dashed border-slate-300 dark:border-slate-600 pt-2 mt-2">
                 <span className="text-slate-900 dark:text-white">Total due today</span>
-                <span className="text-emerald-600 dark:text-emerald-400">₹0.00</span>
+                <span className="text-indigo-600 dark:text-indigo-400">₹{totalAmount.toFixed(2)}</span>
               </div>
             </div>
           </div>
@@ -174,17 +175,17 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
           <button
             type="submit"
             disabled={isProcessing}
-            className="w-full py-4 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold text-lg shadow-lg hover:shadow-xl transition-all disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-3 mt-2"
+            className="w-full py-4 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold text-lg shadow-lg hover:shadow-xl transition-all disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-3 mt-2"
           >
             {isProcessing ? (
               <>
                 <Loader2 size={22} className="animate-spin" />
-                Activating Free Trial...
+                Opening secure checkout...
               </>
             ) : (
               <>
-                <Sparkles size={22} />
-                Activate 30-Day Free Trial
+                <CreditCard size={22} />
+                Pay ₹{totalAmount.toFixed(2)}
               </>
             )}
           </button>
@@ -193,15 +194,15 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
           <div className="flex items-center justify-center gap-6 text-xs text-slate-400 dark:text-slate-500 pt-2">
             <div className="flex items-center gap-1.5">
               <Lock size={12} />
-              <span>No Credit Card Required</span>
+              <span>256-bit Secure</span>
             </div>
             <div className="flex items-center gap-1.5">
               <Shield size={12} />
-              <span>Instant Activation</span>
+              <span>Powered by Razorpay</span>
             </div>
             <div className="flex items-center gap-1.5">
               <CheckCircle2 size={12} />
-              <span>30 Days Free Access</span>
+              <span>Instant Activation</span>
             </div>
           </div>
         </form>
