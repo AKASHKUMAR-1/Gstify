@@ -22,6 +22,7 @@ import { useAuth } from './features/auth/useAuth';
 import { useClients } from './features/clients/useClients';
 import { useProducts } from './features/products/useProducts';
 import { useInvoiceHistory } from './features/invoices/useInvoiceHistory';
+import { fetchSubscription, upsertSubscription, recordTransaction } from './features/billing/subscriptionSync';
 import { startRazorpayCheckout } from './features/billing/razorpay';
 import { useLocalStorage, useLocalStorageString } from './lib/storage';
 import { getSuggestedInvoiceNumber, reserveNextInvoiceNumber } from './features/invoices/invoiceNumber';
@@ -582,6 +583,22 @@ export default function App() {
   const [showPricingPage, setShowPricingPage] = useState(false);
   const [userSubscription, setUserSubscription] = useState<UserSubscription | null>(() => loadSubscription());
 
+  // On login, pull the user's subscription from Supabase so a paid plan
+  // follows them across devices (localStorage is only a same-device cache).
+  useEffect(() => {
+    if (!userId) return;
+    let cancelled = false;
+    fetchSubscription(userId).then((sub) => {
+      if (cancelled || !sub) return;
+      setUserSubscription(sub);
+      if (isSubscriptionActive(sub) && sub.planType !== 'free') {
+        setPlanTier(sub.planType as PlanTier);
+      }
+    });
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId]);
+
   // Payment flow state
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [selectedPaymentPlan, setSelectedPaymentPlan] = useState<SubscriptionPlan | null>(null);
@@ -816,8 +833,21 @@ export default function App() {
     };
 
     saveSubscription(subscription);
-    
-    // Save transaction mock to local storage
+
+    // Persist the subscription and transaction to Supabase so the paid
+    // plan and payment history survive across devices. Fire-and-forget:
+    // localStorage above already unlocks the plan immediately.
+    if (userId) {
+      upsertSubscription(userId, subscription).catch((e) => console.error('subscription sync failed', e));
+      recordTransaction(userId, {
+        orderId,
+        paymentId,
+        amount: amountPaid,
+        currency: selectedPaymentPlan.currency,
+      }).catch((e) => console.error('transaction record failed', e));
+    }
+
+    // Save transaction to local storage (same-device history cache)
     try {
       const saved = localStorage.getItem('gst_invoice_transactions');
       const transactions = saved ? JSON.parse(saved) : [];
