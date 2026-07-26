@@ -143,9 +143,17 @@ export default function App() {
     if (!isLoggedIn) {
       setSelectedPlanOnLanding(tier);
       setIsAuthOpen(true);
-    } else {
-      activatePlanFree(tier);
+      return;
     }
+    if (tier === 'free') {
+      activatePlanFree('free');
+      return;
+    }
+    // Paid tiers must go through the real Razorpay checkout, never a free grant.
+    const plan = SUBSCRIPTION_PLANS.find(
+      p => p.type === tier && p.interval === (isYearlyPricing ? 'yearly' : 'monthly')
+    );
+    if (plan) handlePlanSelect(plan);
   };
 
   const handleGetStarted = () => {
@@ -165,9 +173,17 @@ export default function App() {
       setShowLandingPage(false);
       return;
     }
-    const targetTier = selectedPlanOnLanding || 'pro'; // Default to pro trial
-    activatePlanFree(targetTier);
-    alert(`🎉 Welcome!\n\nYour 30-Day Free Trial for the ${targetTier.toUpperCase()} Plan is now active!`);
+    const targetTier = selectedPlanOnLanding;
+    if (!targetTier || targetTier === 'free') {
+      activatePlanFree('free');
+      return;
+    }
+    // Paid tiers must go through the real Razorpay checkout, never a free grant.
+    const plan = SUBSCRIPTION_PLANS.find(
+      p => p.type === targetTier && p.interval === (isYearlyPricing ? 'yearly' : 'monthly')
+    );
+    if (plan) handlePlanSelect(plan);
+    else setShowLandingPage(false);
   };
 
   // Runs pure validation and syncs the resulting errors into local state.
@@ -1542,6 +1558,11 @@ export default function App() {
               </div>
             </div>
             
+            {(() => {
+              const proPlan = SUBSCRIPTION_PLANS.find(p => p.type === 'pro' && p.interval === (isYearlyPricing ? 'yearly' : 'monthly'))!;
+              const entPlan = SUBSCRIPTION_PLANS.find(p => p.type === 'enterprise' && p.interval === (isYearlyPricing ? 'yearly' : 'monthly'))!;
+              const billingLabel = isYearlyPricing ? '/year' : '/month';
+              return (
             <div className="max-w-5xl mx-auto grid md:grid-cols-3 gap-6 items-stretch pt-6">
               {/* Starter Plan */}
               <div className="bg-white dark:bg-slate-800 rounded-2xl p-8 border border-slate-200 dark:border-slate-700 shadow-lg flex flex-col">
@@ -1587,8 +1608,10 @@ export default function App() {
                       Most Popular
                     </div>
                     <h3 className="text-xl font-semibold mb-3">Professional</h3>
-                    <div className="text-4xl font-bold font-[Playfair_Display] mb-2">₹0</div>
-                    <div className="text-sm text-slate-500 dark:text-slate-400 mb-8">30-Day Free Trial</div>
+                    <div className="text-4xl font-bold font-[Playfair_Display] mb-2">
+                      ₹{proPlan.price.toLocaleString('en-IN')}<span className="text-base font-normal text-slate-500 dark:text-slate-400">{billingLabel}</span>
+                    </div>
+                    <div className="text-sm text-slate-500 dark:text-slate-400 mb-8">+ 18% GST</div>
                     
                     <ul className="space-y-4 mb-8 text-left">
                       <li className="flex items-center gap-3">
@@ -1610,22 +1633,24 @@ export default function App() {
                     </ul>
                   </div>
                   
-                  <button 
+                  <button
                     onClick={() => handleSelectPlanLanding('pro')}
                     className="w-full py-3 rounded-full bg-brand-600 hover:bg-brand-700 text-on-brand font-bold transition-all shadow-lg hover:shadow-xl cursor-pointer"
                   >
-                    Try Free for 30 Days
+                    Subscribe Now
                   </button>
                 </div>
               </div>
-              
-              {/* Enterprise Plan - Free Trial */}
+
+              {/* Enterprise Plan */}
               <div className="relative rounded-2xl overflow-hidden">
                 <div className="bg-white dark:bg-slate-800 rounded-2xl p-8 border border-slate-200 dark:border-slate-700 shadow-lg flex flex-col h-full justify-between">
                   <div>
                     <h3 className="text-xl font-semibold mb-3">Enterprise</h3>
-                    <div className="text-4xl font-bold font-[Playfair_Display] mb-2">₹0</div>
-                    <div className="text-sm text-slate-500 dark:text-slate-400 mb-8">30-Day Free Trial</div>
+                    <div className="text-4xl font-bold font-[Playfair_Display] mb-2">
+                      ₹{entPlan.price.toLocaleString('en-IN')}<span className="text-base font-normal text-slate-500 dark:text-slate-400">{billingLabel}</span>
+                    </div>
+                    <div className="text-sm text-slate-500 dark:text-slate-400 mb-8">+ 18% GST</div>
                     
                     <ul className="space-y-4 mb-8 text-left">
                       <li className="flex items-center gap-3">
@@ -1647,15 +1672,17 @@ export default function App() {
                     </ul>
                   </div>
                   
-                  <button 
+                  <button
                     onClick={() => handleSelectPlanLanding('enterprise')}
                     className="w-full py-3 rounded-full border-2 border-slate-200 dark:border-slate-700 font-semibold hover:border-slate-900 dark:hover:border-white transition-colors cursor-pointer"
                   >
-                    Try Free for 30 Days
+                    Subscribe Now
                   </button>
                 </div>
               </div>
             </div>
+              );
+            })()}
           </section>
 
           {/* Contact Section */}
