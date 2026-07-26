@@ -8,13 +8,25 @@ interface AuthModalProps {
 }
 
 export const AuthModal: React.FC<AuthModalProps> = ({ onClose, onSuccess }) => {
-  const { signUp, signIn } = useAuth();
+  const { signUp, signIn, signInWithGoogle } = useAuth();
   const [mode, setMode] = useState<'signup' | 'login'>('signup');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+
+  const handleGoogleClick = async () => {
+    setError(null);
+    setIsGoogleLoading(true);
+    const { error: authError } = await signInWithGoogle();
+    if (authError) {
+      setError(authError.message);
+      setIsGoogleLoading(false);
+    }
+    // On success the browser redirects to Google, so nothing else runs here.
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -63,6 +75,32 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, onSuccess }) => {
           <p className="text-center text-sm text-content-muted mb-6">
             {mode === 'signup' ? 'Sign up to claim your 1-Month Pro Trial' : 'Log in to your GSTify account'}
           </p>
+
+          <button
+            type="button"
+            onClick={handleGoogleClick}
+            disabled={isGoogleLoading || isSubmitting}
+            aria-busy={isGoogleLoading}
+            className="w-full flex items-center justify-center gap-2.5 py-2.5 rounded-lg border border-line bg-surface-1 hover:bg-surface-2 text-content-primary font-medium transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
+          >
+            {isGoogleLoading ? (
+              <Loader2 size={18} className="animate-spin" />
+            ) : (
+              <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+                <path fill="#4285F4" d="M23.52 12.27c0-.85-.08-1.66-.22-2.45H12v4.64h6.47c-.28 1.5-1.13 2.77-2.4 3.62v3h3.88c2.27-2.09 3.57-5.17 3.57-8.81z"/>
+                <path fill="#34A853" d="M12 24c3.24 0 5.96-1.07 7.95-2.92l-3.88-3c-1.08.72-2.45 1.15-4.07 1.15-3.13 0-5.78-2.11-6.73-4.95H1.27v3.1C3.25 21.3 7.28 24 12 24z"/>
+                <path fill="#FBBC05" d="M5.27 14.28A7.2 7.2 0 0 1 4.9 12c0-.79.14-1.56.37-2.28v-3.1H1.27A11.98 11.98 0 0 0 0 12c0 1.93.46 3.76 1.27 5.38l4-3.1z"/>
+                <path fill="#EA4335" d="M12 4.77c1.76 0 3.35.61 4.6 1.8l3.44-3.44C17.95 1.19 15.24 0 12 0 7.28 0 3.25 2.7 1.27 6.62l4 3.1C6.22 6.88 8.87 4.77 12 4.77z"/>
+              </svg>
+            )}
+            Continue with Google
+          </button>
+
+          <div className="flex items-center gap-3 my-5">
+            <div className="flex-1 h-px bg-line" />
+            <span className="text-xs text-content-muted">OR</span>
+            <div className="flex-1 h-px bg-line" />
+          </div>
 
           <div className="space-y-4">
             {mode === 'signup' && (

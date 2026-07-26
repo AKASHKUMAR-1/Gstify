@@ -32,6 +32,14 @@ export function useAuth() {
 
   const signOut = () => supabase.auth.signOut();
 
+  // Redirects to Google, then back to the current page (Supabase handles
+  // the OAuth exchange and fires onAuthStateChange above once it's done).
+  const signInWithGoogle = () =>
+    supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: window.location.origin },
+    });
+
   return {
     session,
     user: session?.user ?? null,
@@ -40,5 +48,6 @@ export function useAuth() {
     signUp,
     signIn,
     signOut,
+    signInWithGoogle,
   };
 }
